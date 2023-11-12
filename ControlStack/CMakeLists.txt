@@ -69,7 +69,15 @@ target_link_libraries(projectile PUBLIC
 target_link_libraries(projectile PUBLIC Eigen3::Eigen)
 target_link_libraries(projectile PUBLIC glfw)
 target_link_libraries(projectile PUBLIC yaml-cpp)
-# target_link_libraries(projectile yaml-cpp)
+
+
+add_executable(control_pendulum tutorials/control_pendulum/control_pendulum/main.c)
+target_link_libraries(control_pendulum PUBLIC 
+    ${MUJOCO_LIB}
+    m)
+target_link_libraries(control_pendulum PUBLIC Eigen3::Eigen)
+target_link_libraries(control_pendulum PUBLIC glfw)
+target_link_libraries(control_pendulum PUBLIC yaml-cpp)
 
 
 
