@@ -79,7 +79,13 @@ target_link_libraries(control_pendulum PUBLIC Eigen3::Eigen)
 target_link_libraries(control_pendulum PUBLIC glfw)
 target_link_libraries(control_pendulum PUBLIC yaml-cpp)
 
-
+add_executable(dbpendulum tutorials/dbpendulum/dbpendulum/main.c)
+target_link_libraries(dbpendulum PUBLIC 
+    ${MUJOCO_LIB}
+    m)
+target_link_libraries(dbpendulum PUBLIC Eigen3::Eigen)
+target_link_libraries(dbpendulum PUBLIC glfw)
+target_link_libraries(dbpendulum PUBLIC yaml-cpp)
 
 
 
