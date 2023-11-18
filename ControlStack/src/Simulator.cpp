@@ -317,14 +317,14 @@ int main(int argc, const char **argv) {
             mjtNum *pos;
             quat = d->xquat;
             pos = d->xpos;
-	    d->xfrc_applied[6] = 0;
-	    d->xfrc_applied[7] = 0;
-	    for (int i = 0; i < pert_force_x.size(); i++) {
-		if (iter>pert_start[i] && iter < pert_end[i]) {
-		  d->xfrc_applied[6] += pert_force_x[i];
-		  d->xfrc_applied[7] += pert_force_y[i];
-		}
-	    }
+            d->xfrc_applied[6] = 0;
+            d->xfrc_applied[7] = 0;
+            for (int i = 0; i < pert_force_x.size(); i++) {
+                if (iter>pert_start[i] && iter < pert_end[i]) {
+                    d->xfrc_applied[6] += pert_force_x[i];
+                    d->xfrc_applied[7] += pert_force_y[i];
+                }
+            }
 
             // Pack the state message:
             // time[1], pos[3], quat[4], vel[3], omega[3], contact[1], leg (pos,vel)[2], flywheel speed [3]
@@ -372,32 +372,32 @@ int main(int argc, const char **argv) {
 	    iter++;
         } 
 
-	///////////// Set the states of the red and yellow dots to what the MPC predicts ///////////////
-	static int body_offset = 11;
-	static int vel_offset = 10;
-	d->qpos[body_offset+0] = RX_torques[4];
- 	d->qpos[body_offset+1] = RX_torques[5];
-	d->qpos[body_offset+2] = RX_torques[6];
-	d->qvel[vel_offset+0] = 0;
-	d->qvel[vel_offset+1] = 0;
-	d->qvel[vel_offset+2] = 0;
-	d->qpos[body_offset+3] = RX_torques[7];
-	d->qpos[body_offset+4] = RX_torques[8];
-	d->qpos[body_offset+5] = RX_torques[9];
-	d->qpos[body_offset+6] = RX_torques[10];
+        ///////////// Set the states of the red and yellow dots to what the MPC predicts ///////////////
+        static int body_offset = 11;
+        static int vel_offset = 10;
+        d->qpos[body_offset+0] = RX_torques[4];
+        d->qpos[body_offset+1] = RX_torques[5];
+        d->qpos[body_offset+2] = RX_torques[6];
+        d->qvel[vel_offset+0] = 0;
+        d->qvel[vel_offset+1] = 0;
+        d->qvel[vel_offset+2] = 0;
+        d->qpos[body_offset+3] = RX_torques[7];
+        d->qpos[body_offset+4] = RX_torques[8];
+        d->qpos[body_offset+5] = RX_torques[9];
+        d->qpos[body_offset+6] = RX_torques[10];
 
-	d->qpos[22] = RX_torques[11];
-	d->qpos[23] = RX_torques[12];
-	d->qpos[24] = RX_torques[13];
-	d->qpos[25] = RX_torques[14];
-	d->qpos[26] = RX_torques[15];
-	d->qpos[27] = RX_torques[16];
-	d->qpos[28] = RX_torques[17];
-	d->qpos[29] = RX_torques[18];
-	d->qpos[30] = RX_torques[19];
-	d->qpos[31] = RX_torques[20];
-	d->qpos[32] = RX_torques[21];
-	d->qpos[33] = RX_torques[22];
+        d->qpos[22] = RX_torques[11];
+        d->qpos[23] = RX_torques[12];
+        d->qpos[24] = RX_torques[13];
+        d->qpos[25] = RX_torques[14];
+        d->qpos[26] = RX_torques[15];
+        d->qpos[27] = RX_torques[16];
+        d->qpos[28] = RX_torques[17];
+        d->qpos[29] = RX_torques[18];
+        d->qpos[30] = RX_torques[19];
+        d->qpos[31] = RX_torques[20];
+        d->qpos[32] = RX_torques[21];
+        d->qpos[33] = RX_torques[22];
 
 	////////////////////////////////// Standard Mujoco stuff below this //////////////////////////////
         // get framebuffer viewport
