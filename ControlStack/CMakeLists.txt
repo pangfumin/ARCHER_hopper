@@ -87,5 +87,29 @@ target_link_libraries(dbpendulum PUBLIC Eigen3::Eigen)
 target_link_libraries(dbpendulum PUBLIC glfw)
 target_link_libraries(dbpendulum PUBLIC yaml-cpp)
 
+# dbpendulum_fsm
+
+add_executable(dbpendulum_fsm tutorials/dbpendulum_fsm/dbpendulum_fsm/main.c)
+target_link_libraries(dbpendulum_fsm PUBLIC 
+    ${MUJOCO_LIB}
+    m)
+target_link_libraries(dbpendulum_fsm PUBLIC Eigen3::Eigen)
+target_link_libraries(dbpendulum_fsm PUBLIC glfw)
+target_link_libraries(dbpendulum_fsm PUBLIC yaml-cpp)
 
 
+add_executable(dbpendulum_ik tutorials/dbpendulum_ik/dbpendulum_ik/main.c)
+target_link_libraries(dbpendulum_ik PUBLIC 
+    ${MUJOCO_LIB}
+    m)
+target_link_libraries(dbpendulum_ik PUBLIC Eigen3::Eigen)
+target_link_libraries(dbpendulum_ik PUBLIC glfw)
+target_link_libraries(dbpendulum_ik PUBLIC yaml-cpp)
+
+add_executable(dbpendulum_lqr tutorials/dbpendulum_lqr/dbpendulum_lqr/main.c)
+target_link_libraries(dbpendulum_lqr PUBLIC 
+    ${MUJOCO_LIB}
+    m)
+target_link_libraries(dbpendulum_lqr PUBLIC Eigen3::Eigen)
+target_link_libraries(dbpendulum_lqr PUBLIC glfw)
+target_link_libraries(dbpendulum_lqr PUBLIC yaml-cpp)
