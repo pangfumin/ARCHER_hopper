@@ -31,7 +31,9 @@ const int data_frequency = 10; //frequency at which data is written to a file
 //Change the path <template_writeData>
 //Change the xml file
 char path[] = "/home/pang/repo/robotics/ARCHER_hopper/ControlStack/tutorials/dbpendulum_lqr/dbpendulum_lqr/";
-char xmlfile[] = "doublependulum.xml";
+// char xmlfile[] = "doublependulum.xml";
+
+char xmlfile[] = "pendulemwheel.xml";
 
 
 char datafile[] = "data.csv";
