@@ -8,3 +8,5 @@ data
 *.svg
 !ConnectionDiagram.png
 
+.vscode/
+
