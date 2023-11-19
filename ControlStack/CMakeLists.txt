@@ -31,6 +31,8 @@ find_library(MUJOCO_LIB mujoco REQUIRED HINTS ${MUJOCO_DIR}/lib)
 add_library(mujoco SHARED IMPORTED GLOBAL)
 set_property(TARGET mujoco PROPERTY IMPORTED_LOCATION ${CMAKE_INCLUDE_DIR}/lib/libmujoco.so)
 
+
+include_directories(EIGEN3_INCLUDE_DIR)
 # add_library(MPC SHARED
 #     src/Hopper.cpp
 #     src/MPC.cpp
@@ -113,3 +115,11 @@ target_link_libraries(dbpendulum_lqr PUBLIC
 target_link_libraries(dbpendulum_lqr PUBLIC Eigen3::Eigen)
 target_link_libraries(dbpendulum_lqr PUBLIC glfw)
 target_link_libraries(dbpendulum_lqr PUBLIC yaml-cpp)
+
+add_executable(wheelbot tutorials/wheelbot/wheelbot/main.cpp)
+target_link_libraries(wheelbot PUBLIC 
+    ${MUJOCO_LIB}
+    m)
+target_link_libraries(wheelbot PUBLIC Eigen3::Eigen)
+target_link_libraries(wheelbot PUBLIC glfw)
+target_link_libraries(wheelbot PUBLIC yaml-cpp)

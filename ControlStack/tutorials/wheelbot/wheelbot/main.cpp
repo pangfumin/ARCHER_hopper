@@ -9,10 +9,12 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
+#include <Eigen/Core>
+#include <iostream>
 
 
 //simulation end time
-double simend = 10;
+double simend = 100;
 
 #define ndof 2
 
@@ -30,10 +32,10 @@ const int data_frequency = 10; //frequency at which data is written to a file
 
 //Change the path <template_writeData>
 //Change the xml file
-char path[] = "/home/pang/repo/robotics/ARCHER_hopper/ControlStack/tutorials/dbpendulum_lqr/dbpendulum_lqr/";
-char xmlfile[] = "doublependulum.xml";
+char path[] = "/home/pang/repo/robotics/ARCHER_hopper/ControlStack/tutorials/wheelbot/wheelbot/";
+// char xmlfile[] = "doublependulum.xml";
 
-// char xmlfile[] = "pendulemwheel.xml";
+char xmlfile[] = "pendulemwheel.xml";
 
 
 char datafile[] = "data.csv";
@@ -53,6 +55,8 @@ bool button_middle = false;
 bool button_right =  false;
 double lastx = 0;
 double lasty = 0;
+
+double wheel_pos_x_vel_integration = 0;
 
 // holders of one step history of time and position to calculate dertivatives
 mjtNum position_history = 0;
@@ -235,78 +239,78 @@ void f(const mjModel* m, mjData* d,double input[5], double output[4])
 //**************************
 void init_controller(const mjModel* m, mjData* d)
 {
-  int i,j;
-  double input[5]={0};
-  double output[4]={0};
-  double pert = 0.001;
+  // int i,j;
+  // double input[5]={0};
+  // double output[4]={0};
+  // double pert = 0.001;
 
-  //input[0] = 0.1;
-  //input[1] = 0.1;
-  //input[4] = 0.1;
-  double f0[4] = {0};
-  f(m,d,input,output);
-  //printf("%f %f %f %f \n",output[0],output[1],output[2],output[3]);
-  for (i=0;i<4;i++)
-    f0[i] = output[i];
+  // //input[0] = 0.1;
+  // //input[1] = 0.1;
+  // //input[4] = 0.1;
+  // double f0[4] = {0};
+  // f(m,d,input,output);
+  // //printf("%f %f %f %f \n",output[0],output[1],output[2],output[3]);
+  // for (i=0;i<4;i++)
+  //   f0[i] = output[i];
 
-  double A[4][4]={0};
+  // double A[4][4]={0};
 
-  j = 0;
-  for (i=0;i<5;i++)
-    input[i]=0;
-  input[j] = pert;
-  f(m,d,input,output);
-  for (i=0;i<4;i++)
-    A[i][j] = (output[i]-f0[i])/pert;
+  // j = 0;
+  // for (i=0;i<5;i++)
+  //   input[i]=0;
+  // input[j] = pert;
+  // f(m,d,input,output);
+  // for (i=0;i<4;i++)
+  //   A[i][j] = (output[i]-f0[i])/pert;
 
-  j = 1;
-  for (i=0;i<5;i++)
-    input[i]=0;
-  input[j] = pert;
-  f(m,d,input,output);
-  for (i=0;i<4;i++)
-    A[i][j] = (output[i]-f0[i])/pert;
+  // j = 1;
+  // for (i=0;i<5;i++)
+  //   input[i]=0;
+  // input[j] = pert;
+  // f(m,d,input,output);
+  // for (i=0;i<4;i++)
+  //   A[i][j] = (output[i]-f0[i])/pert;
 
-  j = 2;
-  for (i=0;i<5;i++)
-    input[i]=0;
-  input[j] = pert;
-  f(m,d,input,output);
-  for (i=0;i<4;i++)
-    A[i][j] = (output[i]-f0[i])/pert;
+  // j = 2;
+  // for (i=0;i<5;i++)
+  //   input[i]=0;
+  // input[j] = pert;
+  // f(m,d,input,output);
+  // for (i=0;i<4;i++)
+  //   A[i][j] = (output[i]-f0[i])/pert;
 
-  j = 3;
-  for (i=0;i<5;i++)
-    input[i]=0;
-  input[j] = pert;
-  f(m,d,input,output);
-  for (i=0;i<4;i++)
-    A[i][j] = (output[i]-f0[i])/pert;
+  // j = 3;
+  // for (i=0;i<5;i++)
+  //   input[i]=0;
+  // input[j] = pert;
+  // f(m,d,input,output);
+  // for (i=0;i<4;i++)
+  //   A[i][j] = (output[i]-f0[i])/pert;
 
-  printf("A = [...\n");
-  for (i=0;i<4;i++)
-  {
-    for (j=0;j<4;j++)
-    {
-      printf("%f ",A[i][j]);
-    }
-    printf(";\n");
-  }
-  printf(" ];\n\n");
+  // printf("A = [...\n");
+  // for (i=0;i<4;i++)
+  // {
+  //   for (j=0;j<4;j++)
+  //   {
+  //     printf("%f ",A[i][j]);
+  //   }
+  //   printf(";\n");
+  // }
+  // printf(" ];\n\n");
 
-  double B[4] = {0};
-  j = 4;
-  for (i=0;i<5;i++)
-    input[i]=0;
-  input[j] = pert;
-  f(m,d,input,output);
-  for (i=0;i<4;i++)
-    B[i] = (output[i]-f0[i])/pert;
+  // double B[4] = {0};
+  // j = 4;
+  // for (i=0;i<5;i++)
+  //   input[i]=0;
+  // input[j] = pert;
+  // f(m,d,input,output);
+  // for (i=0;i<4;i++)
+  //   B[i] = (output[i]-f0[i])/pert;
 
-    printf("B = [...\n");
-  for (i=0;i<4;i++)
-    printf("%f ;\n",B[i]);
-  printf(" ];\n\n");
+  //   printf("B = [...\n");
+  // for (i=0;i<4;i++)
+  //   printf("%f ;\n",B[i]);
+  // printf(" ];\n\n");
 
 
 }
@@ -317,24 +321,68 @@ void mycontroller(const mjModel* m, mjData* d)
   //write control here
 
 
-  if (lqr==1)
-  {
-  //double K[4]={-265.4197,  -97.9928 , -66.4967,  -28.8720};
-  double K[4] = { -1.2342*1000,   -0.4575*1000,   -0.3158 *1000,  -0.1330*1000};
-  d->ctrl[0] = -K[0]*d->qpos[0]-K[1]*d->qvel[0]-K[2]*d->qpos[1]-K[3]*d->qvel[1];
-  }
+  // if (lqr==1)
+  // {
+  // //double K[4]={-265.4197,  -97.9928 , -66.4967,  -28.8720};
+  // double K[4] = { -1.2342*1000,   -0.4575*1000,   -0.3158 *1000,  -0.1330*1000};
+  // d->ctrl[0] = -K[0]*d->qpos[0]-K[1]*d->qvel[0]-K[2]*d->qpos[1]-K[3]*d->qvel[1];
+  // }
 
-  if (lqr==1)
-  {
-    double noise;
-    mju_standardNormal(&noise);
-    int body = 2;
-    d->xfrc_applied[6*body+0] = 2*noise;
-    body = 1;
-    d->xfrc_applied[6*body+0] = 2*noise;
-    d->qfrc_applied[0]=noise;
-    d->qfrc_applied[1]=noise;
-  }
+  // if (lqr==1)
+  // {
+  //   double noise;
+  //   mju_standardNormal(&noise);
+  //   int body = 2;
+  //   d->xfrc_applied[6*body+0] = 2*noise;
+  //   body = 1;
+  //   d->xfrc_applied[6*body+0] = 2*noise;
+  //   d->qfrc_applied[0]=noise;
+  //   d->qfrc_applied[1]=noise;
+  // }
+
+
+
+  // get chasis pitch and rate-of-pitch
+  double chasis_pitch = d->qpos[2]; // 
+  double chasis_pitch_vel = d->qvel[2];
+  std::cout << "chasis: " << chasis_pitch << " " << chasis_pitch_vel << std::endl;
+   // get wheel pos and velocity
+  int chasis_id = 1;
+  int wheel_id = 2;
+  double wheel_pos_x = d->xpos[3*wheel_id + 0]; //x
+  //double wheel_vel_x = d->xvel[3*wheel_id + 0]; //xe
+  double wheel_pos_vel = d->qvel[3]; //y
+
+  std::cout << "wheel: "  << wheel_pos_x <<   " " << wheel_pos_vel << std::endl;
+
+  // add noise 
+  double noise;
+  mju_standardNormal(&noise);
+  d->xfrc_applied[6*chasis_id+0] = 1*noise;
+
+
+  // get 
+
+  double Kp_chasis = 10;
+  double Kd_chasis = 1;
+
+  double Kp_wheel = 0.21;
+  double Kd_wheel = 0.0;
+  double Ki_wheel = 0.000100;
+
+  double vel_x_setpoint = 2.51; // 0
+
+  double vel_error = wheel_pos_vel - vel_x_setpoint;
+
+  wheel_pos_x_vel_integration += vel_error;
+
+  std::cout << "wheel_pos_x_vel_integration: " << wheel_pos_x_vel_integration << std::endl;
+
+  d->ctrl[0] = - Kp_chasis * chasis_pitch - Kd_chasis * chasis_pitch_vel
+    + Kp_wheel * vel_error + Ki_wheel * wheel_pos_x_vel_integration;
+
+  std::cout << "d->ctrl[0]: " << d->ctrl[0] << std::endl;
+  std::cout << "----------" << std::endl;
 
   //write data here (dont change/dete this function call; instead write what you need to save in save_data)
   if ( loop_index%data_frequency==0)
@@ -403,7 +451,7 @@ int main(int argc, const char** argv)
     glfwSetMouseButtonCallback(window, mouse_button);
     glfwSetScrollCallback(window, scroll);
 
-    double arr_view[] = {89.608063, -11.588379, 5, 0.000000, 0.000000, 2.000000}; //view the left side (for ll, lh, left_side)
+    double arr_view[] = {89.608063, -11.588379, 4.413481, -0.254510, 0.001741, 1.247109}; //view the left side (for ll, lh, left_side)
     cam.azimuth = arr_view[0];
     cam.elevation = arr_view[1];
     cam.distance = arr_view[2];
@@ -418,8 +466,8 @@ int main(int argc, const char** argv)
     init_save_data();
     init_controller(m,d);
 
-    //d->qvel[1] = -0.2;
-    lqr = 1;
+    d->qpos[2] = 0.1;
+    // lqr = 1;
 
     // use the first while condition if you want to simulate for a period.
     while( !glfwWindowShouldClose(window))
@@ -447,7 +495,7 @@ int main(int argc, const char** argv)
           // update scene and render
         mjv_updateScene(m, d, &opt, NULL, &cam, mjCAT_ALL, &scn);
         mjr_render(viewport, &scn, &con);
-        //printf("{%f, %f, %f, %f, %f, %f};\n",cam.azimuth,cam.elevation, cam.distance,cam.lookat[0],cam.lookat[1],cam.lookat[2]);
+        // printf("{%f, %f, %f, %f, %f, %f};\n",cam.azimuth,cam.elevation, cam.distance,cam.lookat[0],cam.lookat[1],cam.lookat[2]);
 
         // swap OpenGL buffers (blocking call due to v-sync)
         glfwSwapBuffers(window);
