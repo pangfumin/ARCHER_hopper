@@ -123,3 +123,11 @@ target_link_libraries(wheelbot PUBLIC
 target_link_libraries(wheelbot PUBLIC Eigen3::Eigen)
 target_link_libraries(wheelbot PUBLIC glfw)
 target_link_libraries(wheelbot PUBLIC yaml-cpp)
+
+add_executable(main_pendulum tutorials/wheelbot/wheelbot/main_pendulum.cpp)
+target_link_libraries(main_pendulum PUBLIC 
+    ${MUJOCO_LIB}
+    m)
+target_link_libraries(main_pendulum PUBLIC Eigen3::Eigen)
+target_link_libraries(main_pendulum PUBLIC glfw)
+target_link_libraries(main_pendulum PUBLIC yaml-cpp)
