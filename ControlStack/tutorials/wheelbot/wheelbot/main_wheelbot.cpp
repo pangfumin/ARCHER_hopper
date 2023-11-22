@@ -370,7 +370,7 @@ void mycontroller(const mjModel* m, mjData* d)
   double Kd_wheel = 0.0;
   double Ki_wheel = 0.000100;
 
-  double vel_x_setpoint = 2.51; // 0
+  double vel_x_setpoint = -2.51; // 0
 
   double vel_error = wheel_pos_vel - vel_x_setpoint;
 

@@ -320,14 +320,14 @@ int main(int argc, const char **argv) {
             mjtNum *pos;
             quat = d->xquat;
             pos = d->xpos;
-	    d->xfrc_applied[6] = 0;
-	    d->xfrc_applied[7] = 0;
-	    for (int i = 0; i < pert_force_x.size(); i++) {
-		if (iter>pert_start[i] && iter < pert_end[i]) {
-		  d->xfrc_applied[6] += pert_force_x[i];
-		  d->xfrc_applied[7] += pert_force_y[i];
-		}
-	    }
+            d->xfrc_applied[6] = 0;
+            d->xfrc_applied[7] = 0;
+            for (int i = 0; i < pert_force_x.size(); i++) {
+                if (iter>pert_start[i] && iter < pert_end[i]) {
+                    d->xfrc_applied[6] += pert_force_x[i];
+                    d->xfrc_applied[7] += pert_force_y[i];
+                }
+            }
 
             // Pack the state message:
             // time[1], pos[3], quat[4], vel[3], omega[3], contact[1], leg (pos,vel)[2], flywheel speed [3]

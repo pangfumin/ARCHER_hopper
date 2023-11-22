@@ -10,10 +10,15 @@
 #include "stdlib.h"
 #include "string.h"
 #include <iostream>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 
+
+//simulation end time
+double simend = 10;
 
 char filename[] 
-  = "/home/pang/repo/robotics/ARCHER_hopper/ControlStack/tutorials/wheelbot/wheelbot/ReactionWheelInvertedPendulum.xml";
+  = "/home/pang/repo/robotics/ARCHER_hopper/ControlStack/tutorials/wheelbot/wheelbot/unicycle.xml";
 
 // MuJoCo data structures
 mjModel* m = NULL;                  // MuJoCo model
@@ -105,39 +110,128 @@ void scroll(GLFWwindow* window, double xoffset, double yoffset)
     mjv_moveCamera(m, mjMOUSE_ZOOM, 0, -0.05*yoffset, &scn, &cam);
 }
 
-
-void mycontroller(const mjModel* m, mjData* d)
+template<typename T>
+Eigen::Matrix<T, 3, 3> RPY2mat(T roll, T pitch, T yaw)
 {
+    Eigen::Matrix<T, 3, 3> m;
 
-  // get chasis pitch and rate-of-pitch
-  int chasis_id = 1;
-  double chasis_pitch = d->qpos[0]; // 
-  double chasis_pitch_vel = d->qvel[0];
-  std::cout << "chasis: " << chasis_pitch << " " << chasis_pitch_vel << std::endl;
+    T cr = cos(roll);
+    T sr = sin(roll);
+    T cp = cos(pitch);
+    T sp = sin(pitch);
+    T cy = cos(yaw);
+    T sy = sin(yaw);
+
+    m(0,0) = cy * cp;
+    m(0,1) = cy * sp * sr - sy * cr;
+    m(0,2) = cy * sp * cr + sy * sr;
+    m(1,0) = sy * cp;
+    m(1,1) = sy * sp * sr + cy * cr;
+    m(1,2) = sy * sp * cr - cy * sr;
+    m(2,0) = - sp;
+    m(2,1) = cp * sr;
+    m(2,2) = cp * cr;
+    return m; 
+}
+
+template<typename T>
+void mat2RPY(const Eigen::Matrix<T, 3, 3>& m, T& roll, T& pitch, T& yaw)
+{
+    roll = atan2(m(2,1), m(2,2));
+    pitch = atan2(-m(2,0), sqrt(m(2,1) * m(2,1) + m(2,2) * m(2,2)));
+    yaw = atan2(m(1,0), m(0,0));
+}
 
 
-  // add noise 
-  double noise;
-  mju_standardNormal(&noise);
-  d->xfrc_applied[6*chasis_id+0] = 100*noise;
+void estimate_alltitude(const mjModel* m, mjData* d, double* roll, double* roll_vel, double* pitch, double* pitch_vel) {
+    int chasis_id = 1;
 
-  double Kp_chasis = 100;
-  double Kd_chasis = 10;
+    double x_angle = 0;
+    double y_angle = 0;
+    double z_angle = 0;
+
+    Eigen::Quaterniond q(d->qpos[3], d->qpos[4], d->qpos[5], d->qpos[6]);
+    Eigen::Matrix3d R = q.toRotationMatrix();
+    mat2RPY<double>(R, x_angle, y_angle, z_angle);
+    
+    // std::cout << "chasis_quat: " << chasis_qx << " " << chasis_qy << " " << chasis_qz << " " << chasis_qw << std::endl;
+    // std::cout << "Euler from quaternion in roll, pitch, yaw: " << euler[0] <<" " << euler[1] <<" " << euler[2] << std::endl;
+//   // get chasis pitch and rate-of-pitch
+    *roll = x_angle;
+    *roll_vel = d->qvel[3];
+
+    *pitch = y_angle;
+    *pitch_vel = d->qvel[4];
+    // std::cout << "vel: " << *roll_vel << " " << *pitch_vel << std::endl;
+}
+
+void estimate_wheel_vel(const mjModel* m, mjData* d, double* vel) {
+    *vel = d->qvel[6]; //y
+} 
+
+double wheel_pos_x_vel_integration = 0;
+
+void wheelcontrol(const mjModel* m, mjData* d, const double& pitch, const double& pitch_vel, const double& wheel_vel) {
+
+  double Kp_chasis = 20;
+  double Kd_chasis = 2;
 
   double Kp_wheel = 0.21;
   double Kd_wheel = 0.0;
   double Ki_wheel = 0.000100;
 
-  double vel_x_setpoint = 2.51; // 0
+  double vel_x_setpoint = 1.51; // 0
 
-  // double vel_error = wheel_pos_vel - vel_x_setpoint;
+  double vel_error = wheel_vel - vel_x_setpoint ;
 
-  // wheel_pos_x_vel_integration += vel_error;
+  wheel_pos_x_vel_integration += vel_error;
 
-  // std::cout << "wheel_pos_x_vel_integration: " << wheel_pos_x_vel_integration << std::endl;
+  std::cout << "wheel_pos_x_vel_integration: " << wheel_pos_x_vel_integration << std::endl;
 
-  d->ctrl[0] = - (- Kp_chasis * chasis_pitch - Kd_chasis * chasis_pitch_vel);//
-    // + Kp_wheel * vel_error + Ki_wheel * wheel_pos_x_vel_integration;
+  d->ctrl[0] = - Kp_chasis * pitch - Kd_chasis * pitch_vel
+    + Kp_wheel * vel_error + Ki_wheel * wheel_pos_x_vel_integration;
+
+  std::cout << "d->ctrl[0]: " << d->ctrl[0] << std::endl;
+  std::cout << "----------" << std::endl;
+    
+}
+
+void pendulumcontrol(const mjModel* m, mjData* d, const double& roll, const double& roll_vel) {
+
+  double Kp_chasis = 3;
+  double Kd_chasis = 0;
+
+//   d->qvel[6] = 0;
+  
+  std::cout << "roll " << roll << std::endl;
+  d->ctrl[1] =  - (- Kp_chasis * roll - Kd_chasis * roll_vel);//
+
+}
+
+
+
+void mycontroller(const mjModel* m, mjData* d)
+{
+
+  int chasis_id = 1;
+
+
+  // add noise 
+  double noise;
+  mju_standardNormal(&noise);
+  d->xfrc_applied[6*chasis_id+0] = 1 * noise;
+  d->xfrc_applied[6*chasis_id+1] = 4 * noise;
+
+    double roll, pitch;
+    double roll_vel, pitch_vel;
+    estimate_alltitude(m, d, &roll, &roll_vel, &pitch, &pitch_vel);
+    std::cout << "chasis_quat: " << roll << " " << roll_vel << " " << pitch << " " << pitch_vel << std::endl;
+    double wheel_vel;
+    estimate_wheel_vel(m,d, &wheel_vel);
+
+    wheelcontrol(m,d, pitch, pitch_vel, wheel_vel);
+    pendulumcontrol(m, d, roll, roll_vel);
+
 }
 
 // main function
@@ -199,10 +293,18 @@ int main(int argc, const char** argv)
 
     //m->opt.gravity[2]=-1;
     //qpos is dim nqx1 = 7x1; 3 translations + 4 quaternions
-    d->qpos[0]=0.21;
+    // d->qpos[0]=0.21;
     // d->qvel[2]=5;
     // d->qvel[0]=2;
     // use the first while condition if you want to simulate for a period.
+
+    // Eigen::Quaterniond q(1, 2, 0, 0);
+    // q.normalized();
+    // d->qpos[3] = q.w();
+    // d->qpos[4] = q.x();
+    // d->qpos[5] = q.y();
+    // d->qpos[6] = q.z();
+
     while( !glfwWindowShouldClose(window))
     {
         // advance interactive simulation for 1/60 sec
@@ -232,6 +334,32 @@ int main(int argc, const char** argv)
             // d->qfrc_applied[0]=fx;
             // d->qfrc_applied[1]=fy;
             // d->qfrc_applied[2]=fz;
+
+    //         double x_angle = 0;
+    //         double y_angle = 0;
+    // //   for (int i = 0; i < int(simend); i++) {
+    //     // for (int j = 0; j < int(simend); j++) {
+    //         x_angle = - M_PI / 2 +  d->time / (simend) * M_PI; 
+    //         std::cout << "x: " << x_angle << std::endl;
+    //         Eigen::Matrix3d R = RPY2mat<double>(x_angle, y_angle, 0);
+    //         Eigen::Quaterniond q(R);
+    //         d->qpos[3] = q.w();
+    //         d->qpos[4] = q.x();
+    //         d->qpos[5] = q.y();
+    //         d->qpos[6] = q.z();
+            // d->xquat[4 * chasis_id + 0] = q.w();
+            // d->xquat[4 * chasis_id + 1] = q.x();
+            // d->xquat[4 * chasis_id + 2] = q.y();
+            // d->xquat[4 * chasis_id + 3] = q.z();
+        // }
+    //   }
+
+
+            if (d->time>=simend)
+            {
+                break;
+            }
+
         }
 
        // get framebuffer viewport
@@ -239,7 +367,7 @@ int main(int argc, const char** argv)
         glfwGetFramebufferSize(window, &viewport.width, &viewport.height);
 
           // update scene and render
-        opt.frame = mjFRAME_WORLD;
+        // opt.frame = mjFRAME_WORLD;
         // cam.lookat[0] = d->qpos[0];
         mjv_updateScene(m, d, &opt, NULL, &cam, mjCAT_ALL, &scn);
         mjr_render(viewport, &scn, &con);

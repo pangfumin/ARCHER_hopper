@@ -108,7 +108,7 @@ target_link_libraries(dbpendulum_ik PUBLIC Eigen3::Eigen)
 target_link_libraries(dbpendulum_ik PUBLIC glfw)
 target_link_libraries(dbpendulum_ik PUBLIC yaml-cpp)
 
-add_executable(dbpendulum_lqr tutorials/dbpendulum_lqr/dbpendulum_lqr/main.c)
+add_executable(dbpendulum_lqr tutorials/dbpendulum_lqr/dbpendulum_lqr/main.cpp)
 target_link_libraries(dbpendulum_lqr PUBLIC 
     ${MUJOCO_LIB}
     m)
@@ -116,7 +116,7 @@ target_link_libraries(dbpendulum_lqr PUBLIC Eigen3::Eigen)
 target_link_libraries(dbpendulum_lqr PUBLIC glfw)
 target_link_libraries(dbpendulum_lqr PUBLIC yaml-cpp)
 
-add_executable(wheelbot tutorials/wheelbot/wheelbot/main.cpp)
+add_executable(wheelbot tutorials/wheelbot/wheelbot/main_wheelbot.cpp)
 target_link_libraries(wheelbot PUBLIC 
     ${MUJOCO_LIB}
     m)
@@ -131,3 +131,11 @@ target_link_libraries(main_pendulum PUBLIC
 target_link_libraries(main_pendulum PUBLIC Eigen3::Eigen)
 target_link_libraries(main_pendulum PUBLIC glfw)
 target_link_libraries(main_pendulum PUBLIC yaml-cpp)
+
+add_executable(main_unicycle tutorials/wheelbot/wheelbot/main_unicycle.cpp)
+target_link_libraries(main_unicycle PUBLIC 
+    ${MUJOCO_LIB}
+    m)
+target_link_libraries(main_unicycle PUBLIC Eigen3::Eigen)
+target_link_libraries(main_unicycle PUBLIC glfw)
+target_link_libraries(main_unicycle PUBLIC yaml-cpp)
