@@ -9,8 +9,7 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
-#include <Eigen/Core>
-
+#include <iostream>
 
 //simulation end time
 double simend = 10;
@@ -20,7 +19,7 @@ double simend = 10;
 int lqr=0;
 
 //related to writing data to a file
-FILE *fid;
+// FILE *fid;
 int loop_index = 0;
 const int data_frequency = 10; //frequency at which data is written to a file
 
@@ -31,13 +30,11 @@ const int data_frequency = 10; //frequency at which data is written to a file
 
 //Change the path <template_writeData>
 //Change the xml file
-char path[] = "/home/pang/repo/robotics/ARCHER_hopper/ControlStack/tutorials/dbpendulum_lqr/dbpendulum_lqr/";
-char xmlfile[] = "doublependulum.xml";
-
-// char xmlfile[] = "pendulemwheel.xml";
+std::string path = "/home/pang/repo/robotics/ARCHER_hopper/ControlStack/tutorials/dbpendulum_lqr/dbpendulum_lqr/";
+std::string xmlfile = "doublependulum.xml";
 
 
-char datafile[] = "data.csv";
+// char datafile[] = "data.csv";
 
 
 // MuJoCo data structures
@@ -136,10 +133,10 @@ void scroll(GLFWwindow* window, double xoffset, double yoffset)
 void init_save_data()
 {
   //write name of the variable here (header)
-   fprintf(fid,"t, ");
+  //  fprintf(fid,"t, ");
 
    //Don't remove the newline
-   fprintf(fid,"\n");
+  //  fprintf(fid,"\n");
 }
 
 //***************************
@@ -148,10 +145,10 @@ void save_data(const mjModel* m, mjData* d)
 {
   //data here should correspond to headers in init_save_data()
   //seperate data by a space %f followed by space
-  fprintf(fid,"%f ",d->time);
+  // fprintf(fid,"%f ",d->time);
 
   //Don't remove the newline
-  fprintf(fid,"\n");
+  // fprintf(fid,"\n");
 }
 
 /******************************/
@@ -350,16 +347,14 @@ void mycontroller(const mjModel* m, mjData* d)
 // main function
 int main(int argc, const char** argv)
 {
+    // char xmlpath[100]={};
+    // char datapath[100]={};
 
+    // strcat(xmlpath,path);
+    // strcat(xmlpath,xmlfile);
 
-    char xmlpath[100]={};
-    char datapath[100]={};
-
-    strcat(xmlpath,path);
-    strcat(xmlpath,xmlfile);
-
-    strcat(datapath,path);
-    strcat(datapath,datafile);
+    // strcat(datapath,path);
+    // strcat(datapath,datafile);
 
 
     // load and compile model
@@ -367,15 +362,15 @@ int main(int argc, const char** argv)
 
     // check command-line arguments
     if( argc<2 )
-        m = mj_loadXML(xmlpath, 0, error, 1000);
+        m = mj_loadXML(std::string(path + xmlfile).c_str(), 0, error, 1000);
 
-    else
-        if( strlen(argv[1])>4 && !strcmp(argv[1]+strlen(argv[1])-4, ".mjb") )
-            m = mj_loadModel(argv[1], 0);
-        else
-            m = mj_loadXML(argv[1], 0, error, 1000);
-    if( !m )
-        mju_error_s("Load model error: %s", error);
+    // else
+    //     if( strlen(argv[1])>4 && !strcmp(argv[1]+strlen(argv[1])-4, ".mjb") )
+    //         m = mj_loadModel(argv[1], 0);
+    //     else
+    //         m = mj_loadXML(argv[1], 0, error, 1000);
+    // if( !m )
+    //     mju_error_s("Load model error: %s", error);
 
     // make data
     d = mj_makeData(m);
@@ -415,8 +410,8 @@ int main(int argc, const char** argv)
     // install control callback
     mjcb_control = mycontroller;
 
-    fid = fopen(datapath,"w");
-    init_save_data();
+    // fid = fopen(datapath,"w");
+    // init_save_data();
     init_controller(m,d);
 
     //d->qvel[1] = -0.2;
@@ -437,7 +432,7 @@ int main(int argc, const char** argv)
 
         if (d->time>=simend)
         {
-           fclose(fid);
+          //  fclose(fid);
            break;
          }
 
