@@ -109,6 +109,9 @@ target_link_libraries(dbpendulum_ik PUBLIC Eigen3::Eigen)
 target_link_libraries(dbpendulum_ik PUBLIC glfw)
 target_link_libraries(dbpendulum_ik PUBLIC yaml-cpp)
 
+set(drake_DIR "/home/pang/repo/drake/build/install/lib/cmake/drake")
+find_package(drake CONFIG REQUIRED)
+
 add_executable(dbpendulum_lqr tutorials/dbpendulum_lqr/dbpendulum_lqr/main.cpp)
 target_link_libraries(dbpendulum_lqr PUBLIC 
     ${MUJOCO_LIB}
@@ -116,6 +119,7 @@ target_link_libraries(dbpendulum_lqr PUBLIC
 target_link_libraries(dbpendulum_lqr PUBLIC Eigen3::Eigen)
 target_link_libraries(dbpendulum_lqr PUBLIC glfw)
 target_link_libraries(dbpendulum_lqr PUBLIC yaml-cpp)
+target_link_libraries(dbpendulum_lqr PUBLIC drake::drake)
 
 add_executable(wheelbot tutorials/wheelbot/wheelbot/main_wheelbot.cpp)
 target_link_libraries(wheelbot PUBLIC 

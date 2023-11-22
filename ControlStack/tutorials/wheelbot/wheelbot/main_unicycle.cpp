@@ -198,7 +198,7 @@ void wheelcontrol(const mjModel* m, mjData* d, const double& pitch, const double
 
 void pendulumcontrol(const mjModel* m, mjData* d, const double& roll, const double& roll_vel) {
 
-  double Kp_chasis = 3;
+  double Kp_chasis = 30;
   double Kd_chasis = 0;
 
 //   d->qvel[6] = 0;
@@ -220,7 +220,7 @@ void mycontroller(const mjModel* m, mjData* d)
   double noise;
   mju_standardNormal(&noise);
   d->xfrc_applied[6*chasis_id+0] = 1 * noise;
-  d->xfrc_applied[6*chasis_id+1] = 4 * noise;
+  d->xfrc_applied[6*chasis_id+1] = 10 * noise;
 
     double roll, pitch;
     double roll_vel, pitch_vel;

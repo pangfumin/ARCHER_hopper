@@ -9,7 +9,11 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
+#include <Eigen/Core>
 #include <iostream>
+#include "drake/systems/controllers/linear_quadratic_regulator.h"
+
+//simul
 
 //simulation end time
 double simend = 10;
@@ -24,12 +28,6 @@ int loop_index = 0;
 const int data_frequency = 10; //frequency at which data is written to a file
 
 
-// char xmlpath[] = "../myproject/template_writeData/pendulum.xml";
-// char datapath[] = "../myproject/template_writeData/data.csv";
-
-
-//Change the path <template_writeData>
-//Change the xml file
 std::string path = "/home/pang/repo/robotics/ARCHER_hopper/ControlStack/tutorials/dbpendulum_lqr/dbpendulum_lqr/";
 std::string xmlfile = "doublependulum.xml";
 
@@ -317,9 +315,71 @@ void mycontroller(const mjModel* m, mjData* d)
 
   if (lqr==1)
   {
-  //double K[4]={-265.4197,  -97.9928 , -66.4967,  -28.8720};
-  double K[4] = { -1.2342*1000,   -0.4575*1000,   -0.3158 *1000,  -0.1330*1000};
-  d->ctrl[0] = -K[0]*d->qpos[0]-K[1]*d->qvel[0]-K[2]*d->qpos[1]-K[3]*d->qvel[1];
+
+    //     // System dynamics matrices: https://github.com/RobotLocomotion/drake/blob/master/systems/controllers/zmp_planner.h#L306
+    // Eigen::Matrix<mjtNum , 2, 2> A_;
+    // Eigen::Matrix<mjtNum , 2, 1> B_;
+    // Eigen::Matrix<mjtNum , 2, 2> Q_ = Eigen::Matrix<mjtNum , 2, 2>::Identity();
+    // Eigen::Matrix<mjtNum , 1, 1> R_ = Eigen::Matrix<mjtNum , 1, 1>::Identity();
+    // Eigen::Matrix<mjtNum , 2, 1> N = Eigen::Matrix<mjtNum , 2, 1>::Zero();
+
+
+    // // Eqs comming from https://youtu.be/XA6B1IxALhk?t=30m3s
+    // A_(0,0) = 0.0;
+    // A_(0,1) = 1.0;
+    // A_(1,0) = - m->opt.gravity[2]*mju_cos(d->sensordata[0])/(m->geom_size[rod_id*3+1]*2);
+    // A_(1,1) = - m->dof_damping[pivot_id]/(m->body_mass[ball_id]*mju_pow(m->geom_size[rod_id*3+1]*2,2.0));
+    // B_(0,0) = 0.0;
+    // B_(1,0) = 1.0;
+    // Q_ *= 10.0;
+
+//     A = [...
+// 0.000000 1.000000 0.000000 0.000000 ;
+// 12.124717 0.000000 -11.022452 -0.000000 ;
+// 0.000000 0.000000 0.000000 1.000000 ;
+// -15.431458 -0.000000 40.783088 0.000000 ;
+//  ];
+
+// B = [...
+// 0.000000 ;
+// -3.820225 ;
+// 0.000000 ;
+// 12.134831 ;
+//  ];
+
+    Eigen::Matrix4d A;
+    A <<  0.000000, 1.000000, 0.000000, 0.000000,
+    12.124717, 0.000000, -11.022452, -0.000000,
+    0.000000, 0.000000, 0.000000, 1.000000,
+    -15.431458, -0.000000, 40.783088, 0.000000;
+    Eigen::Vector4d B(
+      0.000000,
+    -3.820225,
+    0.000000,
+    12.134831
+    );
+
+    Eigen::Matrix4d Q;
+    Q.setIdentity();
+    Eigen::Matrix<double, 1,1 > R;
+    R << 0.1;
+    Eigen::Matrix<mjtNum , 4, 1> N = Eigen::Matrix<mjtNum , 4, 1>::Zero();
+
+
+
+
+
+
+    drake::systems::controllers::LinearQuadraticRegulatorResult lqr_result =
+            drake::systems::controllers::LinearQuadraticRegulator(A, B, Q, R, N);
+    // Eigen::Matrix<mjtNum, 2, 2> S1_ = lqr_result.S;
+    Eigen::Matrix<mjtNum, 1, 4> K= lqr_result.K;
+
+    std::cout << "K: " << K.transpose() << std::endl;
+
+    //double K[4]={-265.4197,  -97.9928 , -66.4967,  -28.8720};
+    // double K[4] = { -1.2342*1000,   -0.4575*1000,   -0.3158 *1000,  -0.1330*1000};
+    d->ctrl[0] = -K[0]*d->qpos[0]-K[1]*d->qvel[0]-K[2]*d->qpos[1]-K[3]*d->qvel[1];
   }
 
   if (lqr==1)
