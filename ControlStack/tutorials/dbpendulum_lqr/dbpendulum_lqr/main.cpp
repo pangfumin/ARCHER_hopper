@@ -59,6 +59,91 @@ float_t ctrl_update_freq = 100;
 mjtNum last_update = 0.0;
 mjtNum ctrl;
 
+
+class Model {
+  public:
+  Model(const mjModel* m, mjData* d)
+  : m_(m), d_(d){
+
+  }
+
+  bool Evaluate(double const* const* parameters,
+                        double* residuals,
+                        double** jacobians) {
+                           
+    d->qpos[0] = parameters[0][0];
+    d->qvel[0] = parameters[0][1];
+    d->qpos[1] = parameters[0][2];
+    d->qvel[1] = parameters[0][3];
+    d->ctrl[0] = parameters[1][0];
+    mj_forward(m,d);
+
+    double q1dot, q2dot;
+    q1dot = d->qvel[0];
+    q2dot = d->qvel[1];
+
+    //Equation of motion
+    //M*qacc + qfrc_bias = ctrl
+    //qacc = inv(M)*(ctrl-qfrc_bias) = q1ddot, q2ddot
+    int i;
+    //const int ndof = 2;
+    double M[ndof*ndof] = {0};
+    mj_fullM(m,M,d->qM);
+    //M = {M[0] M[1]; M[2] M[3]}
+    double det_M = M[0]*M[3] - M[1]*M[2];
+    double Minv[] = {M[3],-M[1],-M[2],M[0]};
+    for (i=0;i<4;i++)
+      Minv[i] = Minv[i]/det_M;
+
+    //printf("%f %f %f %f \n",M[0],M[1],M[2],M[3]);
+
+    double qacc[ndof]={0};
+    double f[ndof]={0};
+    //f = (ctrl-qfrc_bias)
+    f[0] = 0-d->qfrc_bias[0]; //no ctrl because there is no control on link 1
+    f[1] = d->ctrl[0]-d->qfrc_bias[1];
+    //printf("%f %f \n",f[0],f[1]);
+
+    //qacc = inv(M)*(ctrl-qfrc_bias)
+    mju_mulMatVec(qacc,Minv,f,2,2);
+
+    double q1ddot = qacc[0];
+    double q2ddot = qacc[1];
+
+    residuals[0] = q1dot;
+    residuals[1] = q1ddot;
+    residuals[2] = q2dot;
+    residuals[3] = q2ddot;
+    return true;
+
+  }
+
+  private:
+  const mjModel* m_;
+  mjData* d_;
+
+};
+
+void getAB(const mjModel* m, mjData* d ) {
+
+
+  double x[4] = {0};
+  double u[1] = {0};
+  double *parameters[2] = {x, u};
+  Model model(m, d);
+  Eigen::Matrix<double, 4, 4, Eigen::RowMajor> A_;
+  
+  NumDiff<Model, 2> numdiff(&model);
+  numdiff.df_r_xi<4,4>(parameters, 0, A_.data());
+
+  std::cout << "A_: \n" << A_ << std::endl;
+
+  Eigen::Matrix<double, 4, 1> B_;
+  numdiff.df_r_xi<4,1>(parameters, 1 , B_.data());
+  std::cout << "B_: \n" << B_ << std::endl;
+
+}
+
 // keyboard callback
 void keyboard(GLFWwindow* window, int key, int scancode, int act, int mods)
 {
