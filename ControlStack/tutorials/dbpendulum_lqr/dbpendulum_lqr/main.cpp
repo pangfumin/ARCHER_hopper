@@ -279,33 +279,33 @@ void f(const mjModel* m, mjData* d,double input[5], double output[4])
   q1dot = d->qvel[0];
   q2dot = d->qvel[1];
 
-  //Equation of motion
-  //M*qacc + qfrc_bias = ctrl
-  //qacc = inv(M)*(ctrl-qfrc_bias) = q1ddot, q2ddot
-  int i;
-  //const int ndof = 2;
-  double M[ndof*ndof] = {0};
-  mj_fullM(m,M,d->qM);
-  //M = {M[0] M[1]; M[2] M[3]}
-  double det_M = M[0]*M[3] - M[1]*M[2];
-  double Minv[] = {M[3],-M[1],-M[2],M[0]};
-  for (i=0;i<4;i++)
-    Minv[i] = Minv[i]/det_M;
+  // //Equation of motion
+  // //M*qacc + qfrc_bias = ctrl
+  // //qacc = inv(M)*(ctrl-qfrc_bias) = q1ddot, q2ddot
+  // int i;
+  // //const int ndof = 2;
+  // double M[ndof*ndof] = {0};
+  // mj_fullM(m,M,d->qM);
+  // //M = {M[0] M[1]; M[2] M[3]}
+  // double det_M = M[0]*M[3] - M[1]*M[2];
+  // double Minv[] = {M[3],-M[1],-M[2],M[0]};
+  // for (i=0;i<4;i++)
+  //   Minv[i] = Minv[i]/det_M;
 
-  //printf("%f %f %f %f \n",M[0],M[1],M[2],M[3]);
+  // //printf("%f %f %f %f \n",M[0],M[1],M[2],M[3]);
 
-  double qacc[ndof]={0};
-  double f[ndof]={0};
-  //f = (ctrl-qfrc_bias)
-  f[0] = 0-d->qfrc_bias[0]; //no ctrl because there is no control on link 1
-  f[1] = d->ctrl[0]-d->qfrc_bias[1];
-  //printf("%f %f \n",f[0],f[1]);
+  // double qacc[ndof]={0};
+  // double f[ndof]={0};
+  // //f = (ctrl-qfrc_bias)
+  // f[0] = 0-d->qfrc_bias[0]; //no ctrl because there is no control on link 1
+  // f[1] = d->ctrl[0]-d->qfrc_bias[1];
+  // //printf("%f %f \n",f[0],f[1]);
 
-  //qacc = inv(M)*(ctrl-qfrc_bias)
-  mju_mulMatVec(qacc,Minv,f,2,2);
+  // //qacc = inv(M)*(ctrl-qfrc_bias)
+  // mju_mulMatVec(qacc,Minv,f,2,2);
 
-  double q1ddot = qacc[0];
-  double q2ddot = qacc[1];
+  double q1ddot = d->qacc[0];
+  double q2ddot = d->qacc[1];
 
   output[0] = q1dot;
   output[1] = q1ddot;
@@ -415,15 +415,6 @@ void mycontroller(const mjModel* m, mjData* d)
     // Eigen::Matrix<mjtNum , 1, 1> R_ = Eigen::Matrix<mjtNum , 1, 1>::Identity();
     // Eigen::Matrix<mjtNum , 2, 1> N = Eigen::Matrix<mjtNum , 2, 1>::Zero();
 
-
-    // // Eqs comming from https://youtu.be/XA6B1IxALhk?t=30m3s
-    // A_(0,0) = 0.0;
-    // A_(0,1) = 1.0;
-    // A_(1,0) = - m->opt.gravity[2]*mju_cos(d->sensordata[0])/(m->geom_size[rod_id*3+1]*2);
-    // A_(1,1) = - m->dof_damping[pivot_id]/(m->body_mass[ball_id]*mju_pow(m->geom_size[rod_id*3+1]*2,2.0));
-    // B_(0,0) = 0.0;
-    // B_(1,0) = 1.0;
-    // Q_ *= 10.0;
 
 //     A = [...
 // 0.000000 1.000000 0.000000 0.000000 ;
