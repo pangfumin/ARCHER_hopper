@@ -10,6 +10,9 @@
 #include "stdlib.h"
 #include "string.h"
 #include <iostream>
+#include "drake/systems/controllers/linear_quadratic_regulator.h"
+#include "../..//utility/numdiff.hpp"
+
 
 
 char filename[] 
@@ -38,6 +41,55 @@ mjtNum previous_time = 0;
 float_t ctrl_update_freq = 100;
 mjtNum last_update = 0.0;
 mjtNum ctrl;
+
+
+class ForwardModel {
+  public:
+  ForwardModel()
+  {
+
+  }
+
+  bool Evaluate(double const* const* parameters,
+                        double* residuals,
+                        double** jacobians) {
+
+    // chasis pitch, chasis pitch vel, wheel_q, wheel_vel          
+    d->qpos[0] = parameters[0][0];
+    d->qvel[0] = parameters[0][1];
+    d->qpos[1] = parameters[0][2];
+    d->qvel[1] = parameters[0][3];
+    d->ctrl[0] = parameters[1][0];
+    mj_forward(m,d);
+    residuals[0] = d->qvel[0];
+    residuals[1] = d->qacc[0];
+    residuals[2] = d->qvel[1];
+    residuals[3] = d->qacc[1];
+
+    return true;
+
+  }
+
+  private:
+  
+
+};
+
+void getAB(const mjModel* m, mjData* d, 
+  Eigen::Matrix<double, 4, 4, Eigen::RowMajor>& A, 
+  Eigen::Matrix<double, 4, 1>& B) {
+
+  double x[4] = {0};
+  double u[1] = {0};
+  double *parameters[2] = {x, u};
+  ForwardModel model;
+  
+  NumDiff<ForwardModel, 2> numdiff(&model);
+  numdiff.df_r_xi<4,4>(parameters, 0, A.data());
+  std::cout << "A_: \n" << A << std::endl;
+  numdiff.df_r_xi<4,1>(parameters, 1 , B.data());
+  std::cout << "B_: \n" << B << std::endl;
+}
 
 // keyboard callback
 void keyboard(GLFWwindow* window, int key, int scancode, int act, int mods)
@@ -105,6 +157,12 @@ void scroll(GLFWwindow* window, double xoffset, double yoffset)
     mjv_moveCamera(m, mjMOUSE_ZOOM, 0, -0.05*yoffset, &scn, &cam);
 }
 
+Eigen::Matrix<double, 4, 4, Eigen::RowMajor> A;
+Eigen::Matrix<double, 4, 1> B;
+void init_controller(const mjModel* m, mjData* d)
+{
+   getAB(m, d, A, B);
+}
 
 void mycontroller(const mjModel* m, mjData* d)
 {
@@ -113,7 +171,7 @@ void mycontroller(const mjModel* m, mjData* d)
   int chasis_id = 1;
   double chasis_pitch = d->qpos[0]; // 
   double chasis_pitch_vel = d->qvel[0];
-  std::cout << "chasis: " << chasis_pitch << " " << chasis_pitch_vel << std::endl;
+//   std::cout << "chasis: " << chasis_pitch << " " << chasis_pitch_vel << std::endl;
 
 
   // add noise 
@@ -121,23 +179,43 @@ void mycontroller(const mjModel* m, mjData* d)
   mju_standardNormal(&noise);
   d->xfrc_applied[6*chasis_id+0] = 100*noise;
 
-  double Kp_chasis = 100;
-  double Kd_chasis = 10;
+    bool use_LQR = true;
 
-  double Kp_wheel = 0.21;
-  double Kd_wheel = 0.0;
-  double Ki_wheel = 0.000100;
+    if (!use_LQR) {
+        double Kp_chasis = 100;
+        double Kd_chasis = 10;
 
-  double vel_x_setpoint = 2.51; // 0
+        double Kp_wheel = 0.21;
+        double Kd_wheel = 0.0;
+        double Ki_wheel = 0.000100;
 
-  // double vel_error = wheel_pos_vel - vel_x_setpoint;
+        double vel_x_setpoint = 2.51; // 0
 
-  // wheel_pos_x_vel_integration += vel_error;
+        // double vel_error = wheel_pos_vel - vel_x_setpoint;
 
-  // std::cout << "wheel_pos_x_vel_integration: " << wheel_pos_x_vel_integration << std::endl;
+        // wheel_pos_x_vel_integration += vel_error;
 
-  d->ctrl[0] = - (- Kp_chasis * chasis_pitch - Kd_chasis * chasis_pitch_vel);//
-    // + Kp_wheel * vel_error + Ki_wheel * wheel_pos_x_vel_integration;
+        // std::cout << "wheel_pos_x_vel_integration: " << wheel_pos_x_vel_integration << std::endl;
+
+        d->ctrl[0] = - (- Kp_chasis * chasis_pitch - Kd_chasis * chasis_pitch_vel);//
+
+    } else {
+        Eigen::Matrix4d Q;
+        Eigen::Matrix<double, 1,1 > R;
+        Q.setIdentity();
+        R << 0.1;
+        Eigen::Matrix<mjtNum , 4, 1> N = Eigen::Matrix<mjtNum , 4, 1>::Zero();
+
+        drake::systems::controllers::LinearQuadraticRegulatorResult lqr_result =
+            drake::systems::controllers::LinearQuadraticRegulator(A, B, Q, R, N);
+        // Eigen::Matrix<mjtNum, 2, 2> S1_ = lqr_result.S;
+        Eigen::Matrix<mjtNum, 1, 4> K= lqr_result.K;
+
+        // std::cout << "K: " << K.transpose() << std::endl;
+        d->ctrl[0] = -K[0]*d->qpos[0]-K[1]*d->qvel[0]-K[2]*d->qpos[1]-K[3]*d->qvel[1];
+
+    }
+
 }
 
 // main function
@@ -194,7 +272,11 @@ int main(int argc, const char** argv)
     cam.lookat[1] = arr_view[4];
     cam.lookat[2] = arr_view[5];
 
-    // install control callback
+
+
+    init_controller(m, d);
+
+        // install control callback
     mjcb_control = mycontroller;
 
     //m->opt.gravity[2]=-1;

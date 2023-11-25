@@ -180,7 +180,7 @@ void wheelcontrol(const mjModel* m, mjData* d, const double& pitch, const double
   double Kd_wheel = 0.0;
   double Ki_wheel = 0.000100;
 
-  double vel_x_setpoint = 1.51; // 0
+  double vel_x_setpoint = 1.0; // 0
 
   double vel_error = wheel_vel - vel_x_setpoint ;
 
@@ -198,7 +198,7 @@ void wheelcontrol(const mjModel* m, mjData* d, const double& pitch, const double
 
 void pendulumcontrol(const mjModel* m, mjData* d, const double& roll, const double& roll_vel) {
 
-  double Kp_chasis = 30;
+  double Kp_chasis = 10;
   double Kd_chasis = 0;
 
 //   d->qvel[6] = 0;
@@ -316,45 +316,6 @@ int main(int argc, const char** argv)
         {
             mj_step(m, d);
 
-            //drag force = -c*v^2*unit_vector(v); v = sqrt(vx^2+vy^2+vz^2)
-            // vector (v) = vx i + vy j + vz k
-            //unit_vector(v) = vector(v)/v
-            //fx = -c*v*vx;
-            //fy = -c*v*vy;
-            //fz = -c*v*vz;
-            // double vx, vy, vz;
-            // vx = d->qvel[0]; vy = d->qvel[1]; vz = d->qvel[2];
-            // double v;
-            // v = sqrt(vx*vx+vy*vy+vz*vz);
-            // double fx, fy, fz;
-            // double c = 1;
-            // fx = -c*v*vx;
-            // fy = -c*v*vy;
-            // fz = -c*v*vz;
-            // d->qfrc_applied[0]=fx;
-            // d->qfrc_applied[1]=fy;
-            // d->qfrc_applied[2]=fz;
-
-    //         double x_angle = 0;
-    //         double y_angle = 0;
-    // //   for (int i = 0; i < int(simend); i++) {
-    //     // for (int j = 0; j < int(simend); j++) {
-    //         x_angle = - M_PI / 2 +  d->time / (simend) * M_PI; 
-    //         std::cout << "x: " << x_angle << std::endl;
-    //         Eigen::Matrix3d R = RPY2mat<double>(x_angle, y_angle, 0);
-    //         Eigen::Quaterniond q(R);
-    //         d->qpos[3] = q.w();
-    //         d->qpos[4] = q.x();
-    //         d->qpos[5] = q.y();
-    //         d->qpos[6] = q.z();
-            // d->xquat[4 * chasis_id + 0] = q.w();
-            // d->xquat[4 * chasis_id + 1] = q.x();
-            // d->xquat[4 * chasis_id + 2] = q.y();
-            // d->xquat[4 * chasis_id + 3] = q.z();
-        // }
-    //   }
-
-
             if (d->time>=simend)
             {
                 break;
@@ -368,6 +329,7 @@ int main(int argc, const char** argv)
 
           // update scene and render
         // opt.frame = mjFRAME_WORLD;
+
         // cam.lookat[0] = d->qpos[0];
         mjv_updateScene(m, d, &opt, NULL, &cam, mjCAT_ALL, &scn);
         mjr_render(viewport, &scn, &con);

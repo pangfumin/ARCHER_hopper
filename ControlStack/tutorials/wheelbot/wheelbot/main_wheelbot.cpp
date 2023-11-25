@@ -11,6 +11,8 @@
 #include "string.h"
 #include <Eigen/Core>
 #include <iostream>
+#include "drake/systems/controllers/linear_quadratic_regulator.h"
+#include "../..//utility/numdiff.hpp"
 
 
 //simulation end time
@@ -24,10 +26,6 @@ int lqr=0;
 FILE *fid;
 int loop_index = 0;
 const int data_frequency = 10; //frequency at which data is written to a file
-
-
-// char xmlpath[] = "../myproject/template_writeData/pendulum.xml";
-// char datapath[] = "../myproject/template_writeData/data.csv";
 
 
 //Change the path <template_writeData>
@@ -66,6 +64,54 @@ mjtNum previous_time = 0;
 float_t ctrl_update_freq = 100;
 mjtNum last_update = 0.0;
 mjtNum ctrl;
+
+class ForwardModel {
+  public:
+  ForwardModel()
+  {
+
+  }
+
+  bool Evaluate(double const* const* parameters,
+                        double* residuals,
+                        double** jacobians) {
+
+    // chasis pitch, chasis pitch vel, wheel_q, wheel_vel          
+    d->qpos[2] = parameters[0][0];
+    d->qvel[2] = parameters[0][1];
+    d->qpos[3] = parameters[0][2];
+    d->qvel[3] = parameters[0][3];
+    d->ctrl[0] = parameters[1][0];
+    mj_forward(m,d);
+    residuals[0] = d->qvel[2];
+    residuals[1] = d->qacc[2];
+    residuals[2] = d->qvel[3];
+    residuals[3] = d->qacc[3];
+
+    return true;
+
+  }
+
+  private:
+  
+
+};
+
+void getAB(const mjModel* m, mjData* d, 
+  Eigen::Matrix<double, 4, 4, Eigen::RowMajor>& A, 
+  Eigen::Matrix<double, 4, 1>& B) {
+
+  double x[4] = {0};
+  double u[1] = {0};
+  double *parameters[2] = {x, u};
+  ForwardModel model;
+  
+  NumDiff<ForwardModel, 2> numdiff(&model);
+  numdiff.df_r_xi<4,4>(parameters, 0, A.data());
+  std::cout << "A_: \n" << A << std::endl;
+  numdiff.df_r_xi<4,1>(parameters, 1 , B.data());
+  std::cout << "B_: \n" << B << std::endl;
+}
 
 // keyboard callback
 void keyboard(GLFWwindow* window, int key, int scancode, int act, int mods)
@@ -184,163 +230,22 @@ void set_velocity_servo(const mjModel* m,int actuator_no,double kv)
 }
 /******************************/
 
-void f(const mjModel* m, mjData* d,double input[5], double output[4])
-{
-  //state = q1, q1dot, q2, q2dot
-  //inputs = q1, q1dot, q2, q2dot, u
-  //outputs = q1dot, q1ddot, q2dot, q2ddot
-
-  d->qpos[0] = input[0];
-  d->qvel[0] = input[1];
-  d->qpos[1] = input[2];
-  d->qvel[1] = input[3];
-  d->ctrl[0] = input[4];
-  mj_forward(m,d);
-
-  double q1dot, q2dot;
-  q1dot = d->qvel[0];
-  q2dot = d->qvel[1];
-
-  //Equation of motion
-  //M*qacc + qfrc_bias = ctrl
-  //qacc = inv(M)*(ctrl-qfrc_bias) = q1ddot, q2ddot
-  int i;
-  //const int ndof = 2;
-  double M[ndof*ndof] = {0};
-  mj_fullM(m,M,d->qM);
-  //M = {M[0] M[1]; M[2] M[3]}
-  double det_M = M[0]*M[3] - M[1]*M[2];
-  double Minv[] = {M[3],-M[1],-M[2],M[0]};
-  for (i=0;i<4;i++)
-    Minv[i] = Minv[i]/det_M;
-
-  //printf("%f %f %f %f \n",M[0],M[1],M[2],M[3]);
-
-  double qacc[ndof]={0};
-  double f[ndof]={0};
-  //f = (ctrl-qfrc_bias)
-  f[0] = 0-d->qfrc_bias[0]; //no ctrl because there is no control on link 1
-  f[1] = d->ctrl[0]-d->qfrc_bias[1];
-  //printf("%f %f \n",f[0],f[1]);
-
-  //qacc = inv(M)*(ctrl-qfrc_bias)
-  mju_mulMatVec(qacc,Minv,f,2,2);
-
-  double q1ddot = qacc[0];
-  double q2ddot = qacc[1];
-
-  output[0] = q1dot;
-  output[1] = q1ddot;
-  output[2] = q2dot;
-  output[3] = q2ddot;
-
-}
 
 //**************************
+Eigen::Matrix<double, 4, 4, Eigen::RowMajor> A;
+Eigen::Matrix<double, 4, 1> B;
 void init_controller(const mjModel* m, mjData* d)
 {
-  // int i,j;
-  // double input[5]={0};
-  // double output[4]={0};
-  // double pert = 0.001;
-
-  // //input[0] = 0.1;
-  // //input[1] = 0.1;
-  // //input[4] = 0.1;
-  // double f0[4] = {0};
-  // f(m,d,input,output);
-  // //printf("%f %f %f %f \n",output[0],output[1],output[2],output[3]);
-  // for (i=0;i<4;i++)
-  //   f0[i] = output[i];
-
-  // double A[4][4]={0};
-
-  // j = 0;
-  // for (i=0;i<5;i++)
-  //   input[i]=0;
-  // input[j] = pert;
-  // f(m,d,input,output);
-  // for (i=0;i<4;i++)
-  //   A[i][j] = (output[i]-f0[i])/pert;
-
-  // j = 1;
-  // for (i=0;i<5;i++)
-  //   input[i]=0;
-  // input[j] = pert;
-  // f(m,d,input,output);
-  // for (i=0;i<4;i++)
-  //   A[i][j] = (output[i]-f0[i])/pert;
-
-  // j = 2;
-  // for (i=0;i<5;i++)
-  //   input[i]=0;
-  // input[j] = pert;
-  // f(m,d,input,output);
-  // for (i=0;i<4;i++)
-  //   A[i][j] = (output[i]-f0[i])/pert;
-
-  // j = 3;
-  // for (i=0;i<5;i++)
-  //   input[i]=0;
-  // input[j] = pert;
-  // f(m,d,input,output);
-  // for (i=0;i<4;i++)
-  //   A[i][j] = (output[i]-f0[i])/pert;
-
-  // printf("A = [...\n");
-  // for (i=0;i<4;i++)
-  // {
-  //   for (j=0;j<4;j++)
-  //   {
-  //     printf("%f ",A[i][j]);
-  //   }
-  //   printf(";\n");
-  // }
-  // printf(" ];\n\n");
-
-  // double B[4] = {0};
-  // j = 4;
-  // for (i=0;i<5;i++)
-  //   input[i]=0;
-  // input[j] = pert;
-  // f(m,d,input,output);
-  // for (i=0;i<4;i++)
-  //   B[i] = (output[i]-f0[i])/pert;
-
-  //   printf("B = [...\n");
-  // for (i=0;i<4;i++)
-  //   printf("%f ;\n",B[i]);
-  // printf(" ];\n\n");
-
-
+  std::cout << "nv: " << m->nv << std::endl;
+  std::cout << "nu: " << m->nu << std::endl;
+  getAB(m, d, A, B);
 }
+
 
 //**************************
 void mycontroller(const mjModel* m, mjData* d)
 {
   //write control here
-
-
-  // if (lqr==1)
-  // {
-  // //double K[4]={-265.4197,  -97.9928 , -66.4967,  -28.8720};
-  // double K[4] = { -1.2342*1000,   -0.4575*1000,   -0.3158 *1000,  -0.1330*1000};
-  // d->ctrl[0] = -K[0]*d->qpos[0]-K[1]*d->qvel[0]-K[2]*d->qpos[1]-K[3]*d->qvel[1];
-  // }
-
-  // if (lqr==1)
-  // {
-  //   double noise;
-  //   mju_standardNormal(&noise);
-  //   int body = 2;
-  //   d->xfrc_applied[6*body+0] = 2*noise;
-  //   body = 1;
-  //   d->xfrc_applied[6*body+0] = 2*noise;
-  //   d->qfrc_applied[0]=noise;
-  //   d->qfrc_applied[1]=noise;
-  // }
-
-
 
   // get chasis pitch and rate-of-pitch
   double chasis_pitch = d->qpos[2]; // 
@@ -362,27 +267,43 @@ void mycontroller(const mjModel* m, mjData* d)
 
 
   // get 
+  bool use_LQR = false;
+  if (!use_LQR) {
+    double Kp_chasis = 10;
+    double Kd_chasis = 1;
 
-  double Kp_chasis = 10;
-  double Kd_chasis = 1;
+    double Kp_wheel = 0.21;
+    double Kd_wheel = 0.0;
+    double Ki_wheel = 0.000100;
 
-  double Kp_wheel = 0.21;
-  double Kd_wheel = 0.0;
-  double Ki_wheel = 0.000100;
+    double vel_x_setpoint = -2.51; // 0
 
-  double vel_x_setpoint = -2.51; // 0
+    double vel_error = wheel_pos_vel - vel_x_setpoint;
 
-  double vel_error = wheel_pos_vel - vel_x_setpoint;
+    wheel_pos_x_vel_integration += vel_error;
 
-  wheel_pos_x_vel_integration += vel_error;
+    std::cout << "wheel_pos_x_vel_integration: " << wheel_pos_x_vel_integration << std::endl;
 
-  std::cout << "wheel_pos_x_vel_integration: " << wheel_pos_x_vel_integration << std::endl;
+    d->ctrl[0] = - Kp_chasis * chasis_pitch - Kd_chasis * chasis_pitch_vel
+      + Kp_wheel * vel_error + Ki_wheel * wheel_pos_x_vel_integration;
 
-  d->ctrl[0] = - Kp_chasis * chasis_pitch - Kd_chasis * chasis_pitch_vel
-    + Kp_wheel * vel_error + Ki_wheel * wheel_pos_x_vel_integration;
+    std::cout << "d->ctrl[0]: " << d->ctrl[0] << std::endl;
+    std::cout << "----------" << std::endl;
+  } else {
+     Eigen::Matrix4d Q;
+      Eigen::Matrix<double, 1,1 > R;
+      Q.setIdentity();
+      R << 0.1;
+      Eigen::Matrix<mjtNum , 4, 1> N = Eigen::Matrix<mjtNum , 4, 1>::Zero();
 
-  std::cout << "d->ctrl[0]: " << d->ctrl[0] << std::endl;
-  std::cout << "----------" << std::endl;
+      drake::systems::controllers::LinearQuadraticRegulatorResult lqr_result =
+              drake::systems::controllers::LinearQuadraticRegulator(A, B, Q, R, N);
+      // Eigen::Matrix<mjtNum, 2, 2> S1_ = lqr_result.S;
+      Eigen::Matrix<mjtNum, 1, 4> K= lqr_result.K;
+
+      std::cout << "K: " << K.transpose() << std::endl;
+      d->ctrl[0] = -K[0]*d->qpos[2]-K[1]*d->qvel[2]-K[2]*d->qpos[3]-K[3]*d->qvel[3];
+  }
 
   //write data here (dont change/dete this function call; instead write what you need to save in save_data)
   if ( loop_index%data_frequency==0)
@@ -459,14 +380,17 @@ int main(int argc, const char** argv)
     cam.lookat[1] = arr_view[4];
     cam.lookat[2] = arr_view[5];
 
-    // install control callback
-    mjcb_control = mycontroller;
 
     fid = fopen(datapath,"w");
     init_save_data();
     init_controller(m,d);
 
-    d->qpos[2] = 0.1;
+
+    // install control callback
+    mjcb_control = mycontroller;
+
+
+    // d->qpos[2] = 0.1;
     // lqr = 1;
 
     // use the first while condition if you want to simulate for a period.
