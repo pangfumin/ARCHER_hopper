@@ -12,6 +12,7 @@
 #include <Eigen/Core>
 #include <iostream>
 #include "drake/systems/controllers/linear_quadratic_regulator.h"
+#include "../..//utility/numdiff.hpp"
 
 //simul
 
@@ -364,10 +365,6 @@ void mycontroller(const mjModel* m, mjData* d)
     Eigen::Matrix<double, 1,1 > R;
     R << 0.1;
     Eigen::Matrix<mjtNum , 4, 1> N = Eigen::Matrix<mjtNum , 4, 1>::Zero();
-
-
-
-
 
 
     drake::systems::controllers::LinearQuadraticRegulatorResult lqr_result =
