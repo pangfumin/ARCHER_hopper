@@ -389,9 +389,6 @@ int main()
         std::cout << "x_init: " << i << " " << x_init.transpose() << std::endl;
         std::cout << "i:      " << i << " " << x0.transpose()  << " ---- " << ctr  << std::endl;
         
-
-
-
         // update the constraint bound
         updateConstraintVectors(x0, lowerBound, upperBound);
         if (!solver.updateBounds(lowerBound, upperBound))
