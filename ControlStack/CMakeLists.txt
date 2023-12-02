@@ -16,8 +16,8 @@ SET(MUJOCO_DIR /home/pang/robotics/mujoco_install CACHE PATH "Path to Mujoco dir
 
 find_package(Eigen3 REQUIRED)
 find_package(yaml-cpp REQUIRED)
-# find_package(osqp REQUIRED)
-# find_package(OsqpEigen REQUIRED)
+find_package(osqp REQUIRED)
+find_package(OsqpEigen REQUIRED)
 find_package(glfw3 REQUIRED)
 # find_package(pinocchio REQUIRED HINTS ${PINOCCHIO_DIR}/lib)
 # find_package(manif REQUIRED HINTS ${MANIF_DIR})
@@ -112,14 +112,14 @@ target_link_libraries(dbpendulum_ik PUBLIC yaml-cpp)
 set(drake_DIR "/home/pang/robotics/drake/build/install/lib/cmake/drake")
 find_package(drake CONFIG REQUIRED)
 
-add_executable(dbpendulum_lqr tutorials/dbpendulum_lqr/dbpendulum_lqr/main.cpp)
-target_link_libraries(dbpendulum_lqr PUBLIC 
-    ${MUJOCO_LIB}
-    m)
-target_link_libraries(dbpendulum_lqr PUBLIC Eigen3::Eigen)
-target_link_libraries(dbpendulum_lqr PUBLIC glfw)
-target_link_libraries(dbpendulum_lqr PUBLIC yaml-cpp)
-target_link_libraries(dbpendulum_lqr PUBLIC drake::drake)
+# add_executable(dbpendulum_lqr tutorials/dbpendulum_lqr/dbpendulum_lqr/main.cpp)
+# target_link_libraries(dbpendulum_lqr PUBLIC 
+#     ${MUJOCO_LIB}
+#     m)
+# target_link_libraries(dbpendulum_lqr PUBLIC Eigen3::Eigen)
+# target_link_libraries(dbpendulum_lqr PUBLIC glfw)
+# target_link_libraries(dbpendulum_lqr PUBLIC yaml-cpp)
+# target_link_libraries(dbpendulum_lqr PUBLIC drake::drake)
 
 add_executable(wheelbot tutorials/wheelbot/wheelbot/main_wheelbot.cpp)
 target_link_libraries(wheelbot PUBLIC 
@@ -130,14 +130,25 @@ target_link_libraries(wheelbot PUBLIC glfw)
 target_link_libraries(wheelbot PUBLIC yaml-cpp)
 target_link_libraries(wheelbot PUBLIC drake::drake)
 
-add_executable(main_pendulum tutorials/wheelbot/wheelbot/main_pendulum.cpp)
-target_link_libraries(main_pendulum PUBLIC 
+add_executable(MPCExample_cartpole tutorials/wheelbot/wheelbot/MPCExample_cartpole.cpp)
+target_link_libraries(MPCExample_cartpole PUBLIC 
     ${MUJOCO_LIB}
     m)
-target_link_libraries(main_pendulum PUBLIC Eigen3::Eigen)
-target_link_libraries(main_pendulum PUBLIC glfw)
-target_link_libraries(main_pendulum PUBLIC yaml-cpp)
-target_link_libraries(main_pendulum PUBLIC drake::drake)
+target_link_libraries(MPCExample_cartpole PUBLIC Eigen3::Eigen)
+target_link_libraries(MPCExample_cartpole PUBLIC glfw)
+target_link_libraries(MPCExample_cartpole PUBLIC yaml-cpp)
+target_link_libraries(MPCExample_cartpole PUBLIC drake::drake)
+target_link_libraries(MPCExample_cartpole PUBLIC osqp::osqp)
+target_link_libraries(MPCExample_cartpole PUBLIC OsqpEigen::OsqpEigen)
+
+# add_executable(main_pendulum tutorials/wheelbot/wheelbot/main_pendulum.cpp)
+# target_link_libraries(main_pendulum PUBLIC 
+#     ${MUJOCO_LIB}
+#     m)
+# target_link_libraries(main_pendulum PUBLIC Eigen3::Eigen)
+# target_link_libraries(main_pendulum PUBLIC glfw)
+# target_link_libraries(main_pendulum PUBLIC yaml-cpp)
+# target_link_libraries(main_pendulum PUBLIC drake::drake)
 
 add_executable(main_unicycle tutorials/wheelbot/wheelbot/main_unicycle.cpp)
 target_link_libraries(main_unicycle PUBLIC 
@@ -148,11 +159,11 @@ target_link_libraries(main_unicycle PUBLIC glfw)
 target_link_libraries(main_unicycle PUBLIC yaml-cpp)
 target_link_libraries(main_unicycle PUBLIC drake::drake)
 
-add_executable(main_cartpole tutorials/wheelbot/wheelbot/main_cartpole.cpp)
-target_link_libraries(main_cartpole PUBLIC 
-    ${MUJOCO_LIB}
-    m)
-target_link_libraries(main_cartpole PUBLIC Eigen3::Eigen)
-target_link_libraries(main_cartpole PUBLIC glfw)
-target_link_libraries(main_cartpole PUBLIC yaml-cpp)
-target_link_libraries(main_cartpole PUBLIC drake::drake)
+# add_executable(main_cartpole tutorials/wheelbot/wheelbot/main_cartpole.cpp)
+# target_link_libraries(main_cartpole PUBLIC 
+#     ${MUJOCO_LIB}
+#     m)
+# target_link_libraries(main_cartpole PUBLIC Eigen3::Eigen)
+# target_link_libraries(main_cartpole PUBLIC glfw)
+# target_link_libraries(main_cartpole PUBLIC yaml-cpp)
+# target_link_libraries(main_cartpole PUBLIC drake::drake)

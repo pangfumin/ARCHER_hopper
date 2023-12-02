@@ -18,7 +18,7 @@
 double simend = 10;
 
 char filename[] 
-  = "/home/pang/repo/robotics/ARCHER_hopper/ControlStack/tutorials/wheelbot/wheelbot/unicycle.xml";
+  = "/home/pang/robotics/ARCHER_hopper/ControlStack/tutorials/wheelbot/wheelbot/unicycle.xml";
 
 // MuJoCo data structures
 mjModel* m = NULL;                  // MuJoCo model
@@ -165,13 +165,14 @@ void estimate_alltitude(const mjModel* m, mjData* d, double* roll, double* roll_
     // std::cout << "vel: " << *roll_vel << " " << *pitch_vel << std::endl;
 }
 
-void estimate_wheel_vel(const mjModel* m, mjData* d, double* vel) {
+void estimate_wheel_vel(const mjModel* m, mjData* d, double* wheel, double* vel) {
+    *wheel = d->qpos[7];
     *vel = d->qvel[6]; //y
 } 
 
 double wheel_pos_x_vel_integration = 0;
 
-void wheelcontrol(const mjModel* m, mjData* d, const double& pitch, const double& pitch_vel, const double& wheel_vel) {
+void wheelcontrol(const mjModel* m, mjData* d, const double& pitch, const double& pitch_vel, const double& wheel, const double& wheel_vel) {
 
   double Kp_chasis = 20;
   double Kd_chasis = 2;
@@ -188,8 +189,14 @@ void wheelcontrol(const mjModel* m, mjData* d, const double& pitch, const double
 
   std::cout << "wheel_pos_x_vel_integration: " << wheel_pos_x_vel_integration << std::endl;
 
+//   double K[4] = {-106.975, -26.0357, -0.316228,  -10.1607};
+//     d->ctrl[0] =  K[0] * pitch  + K[1] * pitch_vel
+//     - K[2] * wheel - K[4] * vel_error ;
+
   d->ctrl[0] = - Kp_chasis * pitch - Kd_chasis * pitch_vel
     + Kp_wheel * vel_error + Ki_wheel * wheel_pos_x_vel_integration;
+
+
 
   std::cout << "d->ctrl[0]: " << d->ctrl[0] << std::endl;
   std::cout << "----------" << std::endl;
@@ -227,9 +234,10 @@ void mycontroller(const mjModel* m, mjData* d)
     estimate_alltitude(m, d, &roll, &roll_vel, &pitch, &pitch_vel);
     std::cout << "chasis_quat: " << roll << " " << roll_vel << " " << pitch << " " << pitch_vel << std::endl;
     double wheel_vel;
-    estimate_wheel_vel(m,d, &wheel_vel);
+    double wheel;
+    estimate_wheel_vel(m,d, &wheel,  &wheel_vel);
 
-    wheelcontrol(m,d, pitch, pitch_vel, wheel_vel);
+    wheelcontrol(m,d, pitch, pitch_vel, wheel, wheel_vel);
     pendulumcontrol(m, d, roll, roll_vel);
 
 }
