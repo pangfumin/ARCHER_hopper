@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_FLAGS "-O3 -pthread")
 
-SET(MUJOCO_DIR /home/pang/repo/local_installs/mujoco CACHE PATH "Path to Mujoco dir")
+SET(MUJOCO_DIR /home/pang/robotics/mujoco_install CACHE PATH "Path to Mujoco dir")
 # SET(PINOCCHIO_DIR /home/amber/repos/pinocchio_install CACHE PATH "Path to pinocchio dir")
 # SET(MANIF_DIR /home/amber/repos/manif_install CACHE PATH "Path to manif dir")
 # list(APPEND CMAKE_PREFIX_PATH ${PINOCCHIO_DIR})
@@ -109,7 +109,7 @@ target_link_libraries(dbpendulum_ik PUBLIC Eigen3::Eigen)
 target_link_libraries(dbpendulum_ik PUBLIC glfw)
 target_link_libraries(dbpendulum_ik PUBLIC yaml-cpp)
 
-set(drake_DIR "/home/pang/repo/drake/build/install/lib/cmake/drake")
+set(drake_DIR "/home/pang/robotics/drake/build/install/lib/cmake/drake")
 find_package(drake CONFIG REQUIRED)
 
 add_executable(dbpendulum_lqr tutorials/dbpendulum_lqr/dbpendulum_lqr/main.cpp)
