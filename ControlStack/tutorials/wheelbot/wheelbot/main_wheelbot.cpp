@@ -331,10 +331,10 @@ void mycontroller(const mjModel* m, mjData* d)
   // add noise 
   double noise;
   mju_standardNormal(&noise);
-  d->xfrc_applied[6*chasis_id+0] = 10*noise;
+  d->xfrc_applied[6*chasis_id+0] = 50*noise;
 
 
-  double vel_x_setpoint = -2.51; // 0
+  double vel_x_setpoint = -.0; // 0
   // get 
   bool use_LQR = true;
   if (!use_LQR) {
@@ -459,7 +459,7 @@ int main(int argc, const char** argv)
     // install control callback
     mjcb_control = mycontroller;
 
-    return -1;
+    // return -1;
 
 
     // d->qpos[2] = 0.1;
