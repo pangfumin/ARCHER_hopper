@@ -161,11 +161,13 @@ target_link_libraries(main_unicycle PUBLIC glfw)
 target_link_libraries(main_unicycle PUBLIC yaml-cpp)
 target_link_libraries(main_unicycle PUBLIC drake::drake)
 
-# add_executable(main_cartpole tutorials/wheelbot/wheelbot/main_cartpole.cpp)
-# target_link_libraries(main_cartpole PUBLIC 
-#     ${MUJOCO_LIB}
-#     m)
-# target_link_libraries(main_cartpole PUBLIC Eigen3::Eigen)
-# target_link_libraries(main_cartpole PUBLIC glfw)
-# target_link_libraries(main_cartpole PUBLIC yaml-cpp)
-# target_link_libraries(main_cartpole PUBLIC drake::drake)
+add_executable(main_cartpole tutorials/wheelbot/wheelbot/main_cartpole.cpp)
+target_link_libraries(main_cartpole PUBLIC 
+    ${MUJOCO_LIB}
+    m)
+target_link_libraries(main_cartpole PUBLIC Eigen3::Eigen)
+target_link_libraries(main_cartpole PUBLIC glfw)
+target_link_libraries(main_cartpole PUBLIC yaml-cpp)
+target_link_libraries(main_cartpole PUBLIC drake::drake)
+target_link_libraries(main_cartpole PUBLIC osqp::osqp)
+target_link_libraries(main_cartpole PUBLIC OsqpEigen::OsqpEigen)

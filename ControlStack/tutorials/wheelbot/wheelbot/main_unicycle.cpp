@@ -141,9 +141,6 @@ class ForwardModel {
     double Ipy = 0.1;
     double Ipz = 0.1;
 
-    
-
-
     double Rw = 0.15;
     double Lc = 0.25;
     double Lcp = 0.25;
@@ -164,8 +161,10 @@ class ForwardModel {
 
     double q_3 = parameters[0][4];
     double dq_3 = parameters[0][5];
+
     double q_4 = parameters[0][6];
     double dq_4 = parameters[0][7];
+
     double q_5 = parameters[0][8];
     double dq_5 = parameters[0][9];
         
@@ -205,11 +204,20 @@ class ForwardModel {
     Eigen::Matrix<double, 5, 1> ddq = inv_M * RHS;
 
     // //
-    residuals[0] = ddq[0];
-    residuals[1] = ddq[1];
-    residuals[2] = ddq[2];
-    residuals[3] = ddq[3];
-    residuals[4] = ddq[4];
+    residuals[0] = dq_1;
+    residuals[1] = ddq[0];
+
+    residuals[2] = dq_2;
+    residuals[3] = ddq[1];
+
+    residuals[4] = dq_3;
+    residuals[5] = ddq[2];
+
+    residuals[6] = dq_4;
+    residuals[7] = ddq[3];
+
+    residuals[8] = dq_5;
+    residuals[9] = ddq[4];
 
     return true;
 
@@ -220,8 +228,8 @@ class ForwardModel {
 };
 
 void getAB(const mjModel* m, mjData* d, 
-  Eigen::Matrix<double, 5, 10, Eigen::RowMajor>& A, 
-  Eigen::Matrix<double, 5, 2>& B) {
+  Eigen::Matrix<double, 10, 10, Eigen::RowMajor>& A, 
+  Eigen::Matrix<double, 10, 2, Eigen::RowMajor>& B) {
 
   double x[10] = {0};
   double u[2] = {0};
@@ -229,9 +237,9 @@ void getAB(const mjModel* m, mjData* d,
   ForwardModel model;
   
   NumDiff<ForwardModel, 2> numdiff(&model);
-  numdiff.df_r_xi<5,10>(parameters, 0, A.data());
+  numdiff.df_r_xi<10, 10>(parameters, 0, A.data());
   std::cout << "A_: \n" << A << std::endl;
-  numdiff.df_r_xi<5,2>(parameters, 1 , B.data());
+  numdiff.df_r_xi<10, 2>(parameters, 1 , B.data());
   std::cout << "B_: \n" << B << std::endl;
 
 }
@@ -301,7 +309,6 @@ void estimate_pendulum_vel(const mjModel* m, mjData* d, double* pendulum, double
     *vel = d->qvel[7]; //y
 } 
 
-double wheel_pos_x_vel_integration = 0;
 
 void wheelcontrol(const mjModel* m, mjData* d, const double& pitch, const double& pitch_vel, const double& wheel, const double& wheel_vel) {
 
@@ -312,17 +319,18 @@ void wheelcontrol(const mjModel* m, mjData* d, const double& pitch, const double
   double Kd_wheel = 0.0;
   double Ki_wheel = 0.000100;
 
-  double vel_x_setpoint = 1.0; // 0
+  double vel_x_setpoint = -5.10; // 0
 
   double vel_error = wheel_vel - vel_x_setpoint ;
 
-  wheel_pos_x_vel_integration += vel_error;
 
 //   std::cout << "wheel_pos_x_vel_integration: " << wheel_pos_x_vel_integration << std::endl;
 
-  double K[4] = {-106.975, -26.0357, -0.316228,  -10.1607};
-    d->ctrl[0] =  K[0] * pitch  + K[1] * pitch_vel
-    - K[2] * wheel - K[4] * vel_error ;
+   double K[4] = {-59.4180,  -15.5681,   -0.1000,   -3.2208};
+//   double K[4] = {-106.975, -26.0357, -0.316228,  -10.1607};
+  d->ctrl[0] =  K[0] * pitch  + K[1] * pitch_vel
+    - K[2] * wheel
+    - K[3] * vel_error ;
 
 //   d->ctrl[0] = - Kp_chasis * pitch - Kd_chasis * pitch_vel
 //     + Kp_wheel * vel_error + Ki_wheel * wheel_pos_x_vel_integration;
@@ -337,55 +345,87 @@ const double& pendulem, const double& pendulem_vel) {
   double Kp_chasis = 10;
   double Kd_chasis = 0;
 
-  double K[4] = {-416.173,
-    -112.531,
-    -3.16228,
-    -4.96986};
-  d->ctrl[1] =  -K[0] * roll  + -K[1] * roll_vel
-    - K[2] * pendulem - K[4] * pendulem_vel ;
+//   double K[4] = {-416.173,
+//     -112.531,
+//     -3.16228,
+//     -4.96986};
+
+    double K[4] = { -291.0357,  -75.4207,   -0.1000,   -3.2173};
+
+  d->ctrl[1] =  -K[0] * roll   -K[1] * roll_vel
+    - K[2] * pendulem - K[3] * pendulem_vel ;
 
 //   d->ctrl[1] =  - (- Kp_chasis * roll - Kd_chasis * roll_vel);//
 
 }
 
 //**************************
-Eigen::Matrix<double, 5, 10, Eigen::RowMajor> A;
-Eigen::Matrix<double, 5, 2> B;
+Eigen::Matrix<double, 10, 10, Eigen::RowMajor> A;
+Eigen::Matrix<double, 10, 2, Eigen::RowMajor> B;
 void init_controller(const mjModel* m, mjData* d)
 {
-  std::cout << "nv: " << m->nv << std::endl;
-  std::cout << "nu: " << m->nu << std::endl;
-  getAB(m, d, A, B);
+    std::cout << "nv: " << m->nv << std::endl;
+    std::cout << "nu: " << m->nu << std::endl;
+    getAB(m, d, A, B);
 
-  Eigen::Matrix4d Ar;
-  Ar << 0, 1, 0, 0,
-   A(0,0) , 0,0,0,
+//   Eigen::Matrix4d Ar;
+//   Ar << 0, 1, 0, 0,
+//    A(0,0) , 0,0,0,
 
-   0,0,0,1, 
-   A(3, 0), 0,0,0;
+//    0,0,0,1, 
+//    A(3, 0), 0,0,0;
 
-   Eigen::Vector4d Br;
-   Br << 0, B(0, 1), 0, B(3, 1);
+//    Eigen::Vector4d Br;
+//    Br << 0, B(0, 1), 0, B(3, 1);
 
-   std::cout << "Ar: \n " << Ar << std::endl;
-   std::cout << "Br: \n " << Br << std::endl; 
+//    std::cout << "Ar: \n " << Ar << std::endl;
+//    std::cout << "Br: \n " << Br << std::endl; 
 
-   Eigen::Matrix4d Qr;
-   Qr.setZero();
-   Qr.diagonal()  << 100,0.1,0.1,100; // %final
-// gain_int_roll = 1e-10;
-   Eigen::Matrix<double, 1,1 > Rr;
-   Rr<< 1000;
+    Eigen::Matrix<double, 10, 10> Qr;
+    Qr.setZero();
+    Qr.diagonal()  << 100, 0.1, 100, 0.1, 0.001, 0.001, 100, 0.1, 100, 0.1; // %final
+    // gain_int_roll = 1e-10;
+    Eigen::Matrix<double, 2, 2 > Rr;
+    Rr.setZero();
+    Rr.diagonal() << 10, 10;
+    Eigen::Matrix<mjtNum , 10, 2> N = Eigen::Matrix<mjtNum , 10, 2>::Zero();
 
-//      Eigen::Matrix<mjtNum , 4, 1> N = Eigen::Matrix<mjtNum , 4, 1>::Zero();
+    // drake::systems::controllers::LinearQuadraticRegulatorResult lqr_result =
+    //         drake::systems::controllers::LinearQuadraticRegulator(A, B, Qr, Rr, N);
+    // // Eigen::Matrix<mjtNum, 1, 10> K= lqr_result.K;
 
-    //   drake::systems::controllers::LinearQuadraticRegulatorResult lqr_result =
-    //           drake::systems::controllers::LinearQuadraticRegulator(Ar, Br, Qr, Rr, N);
-    //   // Eigen::Matrix<mjtNum, 2, 2> S1_ = lqr_result.S;
-    //   Eigen::Matrix<mjtNum, 1, 4> K= lqr_result.K;
+    // // std::cout << "K: " << K << std::endl;
 
-    //   std::cout << "K: " << K << std::endl;
+    Eigen::Matrix<double, 10, 10, Eigen::RowMajor> A_matlab;
+    A_matlab <<
+ 
+                0, 1,          0, 0, 0, 0, 0, 0, 0, 0,
+        15696.0/965.0, 0,          0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0,          0, 1, 0, 0, 0, 0, 0, 0,
+                0, 0, 37278.0/1735.0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0,          0, 0, 0, 1, 0, 0, 0, 0,
+                0, 0,          0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0,          0, 0, 0, 0, 0, 1, 0, 0,
+                0, 0,  -5886.0/347.0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0,          0, 0, 0, 0, 0, 0, 0, 1,
+        -15696.0/965.0, 0,          0, 0, 0, 0, 0, 0, 0, 0;
+ 
+    Eigen::Matrix<double, 10, 2, Eigen::RowMajor> B_matlab;
+    B_matlab <<
+    
+            0,        0,
+            0, -200.0/193.0,
+            0,        0,
+    -1360.0/347.0,        0,
+            0,        0,
+            0,        0,
+            0,        0,
+    2900.0/347.0,        0,
+            0,        0,
+            0, 2130.0/193;
 
+    std::cout << "A_matlab:\n" << A_matlab << std::endl;
+    std::cout << "B_matlab:\n" << B_matlab << std::endl;
 
 
 }
@@ -402,8 +442,8 @@ void mycontroller(const mjModel* m, mjData* d)
   // add noise 
   double noise;
   mju_standardNormal(&noise);
-  d->xfrc_applied[6*chasis_id+0] = 50 * noise;
-  d->xfrc_applied[6*chasis_id+1] = 50 * noise;
+  d->xfrc_applied[6*chasis_id+0] = 10 * noise;
+  d->xfrc_applied[6*chasis_id+1] = 40 * noise;
 
     double roll, pitch;
     double roll_vel, pitch_vel;
@@ -482,6 +522,7 @@ int main(int argc, const char** argv)
     // install control callback
     init_controller(m, d);
     mjcb_control = mycontroller;
+    // return -1;
 
     while( !glfwWindowShouldClose(window))
     {
