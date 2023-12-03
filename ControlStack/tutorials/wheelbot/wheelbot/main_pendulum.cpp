@@ -16,7 +16,7 @@
 
 
 char filename[] 
-  = "/home/pang/repo/robotics/ARCHER_hopper/ControlStack/tutorials/wheelbot/wheelbot/ReactionWheelInvertedPendulum.xml";
+  = "/home/pang/robotics/ARCHER_hopper/ControlStack/tutorials/wheelbot/wheelbot/ReactionWheelInvertedPendulum.xml";
 
 // MuJoCo data structures
 mjModel* m = NULL;                  // MuJoCo model
@@ -211,7 +211,7 @@ void mycontroller(const mjModel* m, mjData* d)
         // Eigen::Matrix<mjtNum, 2, 2> S1_ = lqr_result.S;
         Eigen::Matrix<mjtNum, 1, 4> K= lqr_result.K;
 
-        // std::cout << "K: " << K.transpose() << std::endl;
+        std::cout << "K: " << K.transpose() << std::endl;
         d->ctrl[0] = -K[0]*d->qpos[0]-K[1]*d->qvel[0]-K[2]*d->qpos[1]-K[3]*d->qvel[1];
 
     }

@@ -12,6 +12,9 @@
 #include <iostream>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include "drake/systems/controllers/linear_quadratic_regulator.h"
+#include "../..//utility/numdiff.hpp"
+#include "forwardmodel.h"
 
 
 //simulation end time
@@ -43,6 +46,9 @@ mjtNum previous_time = 0;
 float_t ctrl_update_freq = 100;
 mjtNum last_update = 0.0;
 mjtNum ctrl;
+
+
+
 
 // keyboard callback
 void keyboard(GLFWwindow* window, int key, int scancode, int act, int mods)
@@ -110,6 +116,126 @@ void scroll(GLFWwindow* window, double xoffset, double yoffset)
     mjv_moveCamera(m, mjMOUSE_ZOOM, 0, -0.05*yoffset, &scn, &cam);
 }
 
+
+class ForwardModel {
+  public:
+  ForwardModel()
+  {
+
+
+  }
+
+  bool Evaluate(double const* const* parameters,
+                        double* residuals,
+                        double** jacobians) {
+    double Mw = 1;
+    double Mc = 2;
+    double Mp = 1;
+    double Iwx = 0.1;
+    double Iwy = 0.1;
+    double Iwz = 0.1;
+    double Icx = 0.1;
+    double Icy = 0.1;
+    double Icz = 0.1;
+    double Ipx = 0.1;
+    double Ipy = 0.1;
+    double Ipz = 0.1;
+
+    
+
+
+    double Rw = 0.15;
+    double Lc = 0.25;
+    double Lcp = 0.25;
+    double g = 9.81;
+
+
+// double Mw, double Mc, double Mp, double Iwx,
+// double Iwy, double Iwz, double Icx, double Icy,
+// double Icz, double Ipx, double Ipy, double Ipz,
+// double Rw, double Lc, double Lcp, double,
+// double g,
+
+    double q_1 = parameters[0][0];
+    double dq_1 = parameters[0][1];
+
+    double q_2 = parameters[0][2];
+    double dq_2 = parameters[0][3];
+
+    double q_3 = parameters[0][4];
+    double dq_3 = parameters[0][5];
+    double q_4 = parameters[0][6];
+    double dq_4 = parameters[0][7];
+    double q_5 = parameters[0][8];
+    double dq_5 = parameters[0][9];
+        
+
+    double Tw = parameters[1][0];
+    double Tp = parameters[1][1];
+    // // std::cout << "Tw: " << Tw << std::endl;
+    Eigen::Matrix<double, 5, 5, Eigen::RowMajor> M;
+    Eigen::Matrix<double, 5, 1> RHS;
+    
+    DynamicForward(
+        Mw,
+        Mc,
+        Mp, 
+        Iwx,
+        Iwy,
+        Iwz,
+        Icx,
+        Icy,
+        Icz,
+        Ipx,
+        Ipy,
+        Ipz,
+        Rw,
+        Lc,
+        Lcp,
+        g,
+        Tw, Tp,
+        q_1, q_2, q_5, 
+        dq_1, dq_2, dq_3, dq_4, dq_4,
+        M.data(), RHS.data());
+
+    // std::cout << "M: " << M << std::endl;
+    // std::cout << "RHS: " << RHS << std::endl;
+    
+    Eigen::Matrix<double, 5, 5, Eigen::RowMajor> inv_M = M.inverse();
+    Eigen::Matrix<double, 5, 1> ddq = inv_M * RHS;
+
+    // //
+    residuals[0] = ddq[0];
+    residuals[1] = ddq[1];
+    residuals[2] = ddq[2];
+    residuals[3] = ddq[3];
+    residuals[4] = ddq[4];
+
+    return true;
+
+  }
+
+  private:
+
+};
+
+void getAB(const mjModel* m, mjData* d, 
+  Eigen::Matrix<double, 5, 10, Eigen::RowMajor>& A, 
+  Eigen::Matrix<double, 5, 2>& B) {
+
+  double x[10] = {0};
+  double u[2] = {0};
+  double *parameters[2] = {x, u};
+  ForwardModel model;
+  
+  NumDiff<ForwardModel, 2> numdiff(&model);
+  numdiff.df_r_xi<5,10>(parameters, 0, A.data());
+  std::cout << "A_: \n" << A << std::endl;
+  numdiff.df_r_xi<5,2>(parameters, 1 , B.data());
+  std::cout << "B_: \n" << B << std::endl;
+
+}
+
 template<typename T>
 Eigen::Matrix<T, 3, 3> RPY2mat(T roll, T pitch, T yaw)
 {
@@ -170,6 +296,11 @@ void estimate_wheel_vel(const mjModel* m, mjData* d, double* wheel, double* vel)
     *vel = d->qvel[6]; //y
 } 
 
+void estimate_pendulum_vel(const mjModel* m, mjData* d, double* pendulum, double* vel) {
+    *pendulum = d->qpos[8];
+    *vel = d->qvel[7]; //y
+} 
+
 double wheel_pos_x_vel_integration = 0;
 
 void wheelcontrol(const mjModel* m, mjData* d, const double& pitch, const double& pitch_vel, const double& wheel, const double& wheel_vel) {
@@ -187,33 +318,78 @@ void wheelcontrol(const mjModel* m, mjData* d, const double& pitch, const double
 
   wheel_pos_x_vel_integration += vel_error;
 
-  std::cout << "wheel_pos_x_vel_integration: " << wheel_pos_x_vel_integration << std::endl;
+//   std::cout << "wheel_pos_x_vel_integration: " << wheel_pos_x_vel_integration << std::endl;
 
-//   double K[4] = {-106.975, -26.0357, -0.316228,  -10.1607};
-//     d->ctrl[0] =  K[0] * pitch  + K[1] * pitch_vel
-//     - K[2] * wheel - K[4] * vel_error ;
+  double K[4] = {-106.975, -26.0357, -0.316228,  -10.1607};
+    d->ctrl[0] =  K[0] * pitch  + K[1] * pitch_vel
+    - K[2] * wheel - K[4] * vel_error ;
 
-  d->ctrl[0] = - Kp_chasis * pitch - Kd_chasis * pitch_vel
-    + Kp_wheel * vel_error + Ki_wheel * wheel_pos_x_vel_integration;
+//   d->ctrl[0] = - Kp_chasis * pitch - Kd_chasis * pitch_vel
+//     + Kp_wheel * vel_error + Ki_wheel * wheel_pos_x_vel_integration;
 
-
-
-  std::cout << "d->ctrl[0]: " << d->ctrl[0] << std::endl;
-  std::cout << "----------" << std::endl;
     
 }
 
-void pendulumcontrol(const mjModel* m, mjData* d, const double& roll, const double& roll_vel) {
+void pendulumcontrol(const mjModel* m, mjData* d, 
+const double& roll, const double& roll_vel,
+const double& pendulem, const double& pendulem_vel) {
 
   double Kp_chasis = 10;
   double Kd_chasis = 0;
 
-//   d->qvel[6] = 0;
-  
-  std::cout << "roll " << roll << std::endl;
-  d->ctrl[1] =  - (- Kp_chasis * roll - Kd_chasis * roll_vel);//
+  double K[4] = {-416.173,
+    -112.531,
+    -3.16228,
+    -4.96986};
+  d->ctrl[1] =  -K[0] * roll  + -K[1] * roll_vel
+    - K[2] * pendulem - K[4] * pendulem_vel ;
+
+//   d->ctrl[1] =  - (- Kp_chasis * roll - Kd_chasis * roll_vel);//
 
 }
+
+//**************************
+Eigen::Matrix<double, 5, 10, Eigen::RowMajor> A;
+Eigen::Matrix<double, 5, 2> B;
+void init_controller(const mjModel* m, mjData* d)
+{
+  std::cout << "nv: " << m->nv << std::endl;
+  std::cout << "nu: " << m->nu << std::endl;
+  getAB(m, d, A, B);
+
+  Eigen::Matrix4d Ar;
+  Ar << 0, 1, 0, 0,
+   A(0,0) , 0,0,0,
+
+   0,0,0,1, 
+   A(3, 0), 0,0,0;
+
+   Eigen::Vector4d Br;
+   Br << 0, B(0, 1), 0, B(3, 1);
+
+   std::cout << "Ar: \n " << Ar << std::endl;
+   std::cout << "Br: \n " << Br << std::endl; 
+
+   Eigen::Matrix4d Qr;
+   Qr.setZero();
+   Qr.diagonal()  << 100,0.1,0.1,100; // %final
+// gain_int_roll = 1e-10;
+   Eigen::Matrix<double, 1,1 > Rr;
+   Rr<< 1000;
+
+//      Eigen::Matrix<mjtNum , 4, 1> N = Eigen::Matrix<mjtNum , 4, 1>::Zero();
+
+    //   drake::systems::controllers::LinearQuadraticRegulatorResult lqr_result =
+    //           drake::systems::controllers::LinearQuadraticRegulator(Ar, Br, Qr, Rr, N);
+    //   // Eigen::Matrix<mjtNum, 2, 2> S1_ = lqr_result.S;
+    //   Eigen::Matrix<mjtNum, 1, 4> K= lqr_result.K;
+
+    //   std::cout << "K: " << K << std::endl;
+
+
+
+}
+
 
 
 
@@ -226,19 +402,26 @@ void mycontroller(const mjModel* m, mjData* d)
   // add noise 
   double noise;
   mju_standardNormal(&noise);
-  d->xfrc_applied[6*chasis_id+0] = 1 * noise;
-  d->xfrc_applied[6*chasis_id+1] = 10 * noise;
+  d->xfrc_applied[6*chasis_id+0] = 50 * noise;
+  d->xfrc_applied[6*chasis_id+1] = 50 * noise;
 
     double roll, pitch;
     double roll_vel, pitch_vel;
     estimate_alltitude(m, d, &roll, &roll_vel, &pitch, &pitch_vel);
-    std::cout << "chasis_quat: " << roll << " " << roll_vel << " " << pitch << " " << pitch_vel << std::endl;
+    // std::cout << "chasis_quat: " << roll << " " << roll_vel << " " << pitch << " " << pitch_vel << std::endl;
+
+
     double wheel_vel;
     double wheel;
     estimate_wheel_vel(m,d, &wheel,  &wheel_vel);
 
+    double pendulum_vel;
+    double pendulum;
+    estimate_pendulum_vel(m,d, &pendulum,  &pendulum_vel);
+
+
     wheelcontrol(m,d, pitch, pitch_vel, wheel, wheel_vel);
-    pendulumcontrol(m, d, roll, roll_vel);
+    pendulumcontrol(m, d, roll, roll_vel, pendulum, pendulum_vel);
 
 }
 
@@ -297,21 +480,8 @@ int main(int argc, const char** argv)
     cam.lookat[2] = arr_view[5];
 
     // install control callback
+    init_controller(m, d);
     mjcb_control = mycontroller;
-
-    //m->opt.gravity[2]=-1;
-    //qpos is dim nqx1 = 7x1; 3 translations + 4 quaternions
-    // d->qpos[0]=0.21;
-    // d->qvel[2]=5;
-    // d->qvel[0]=2;
-    // use the first while condition if you want to simulate for a period.
-
-    // Eigen::Quaterniond q(1, 2, 0, 0);
-    // q.normalized();
-    // d->qpos[3] = q.w();
-    // d->qpos[4] = q.x();
-    // d->qpos[5] = q.y();
-    // d->qpos[6] = q.z();
 
     while( !glfwWindowShouldClose(window))
     {
