@@ -5,186 +5,187 @@
 #define assertm(exp, msg) assert(((void)msg, exp))
 
 int MPC::solve(Hopper hopper, vector_t &sol, vector_3t &command, vector_2t &command_interp) {
-    matrix_t x_bar(nx, p.N-1);
-    matrix_t u_bar(nu, p.N-1);
 
-    vector_t x0(21);
-    vector_t x0_local(21);
-    vector_t s0(20);
-    x0 << hopper.q, hopper.v;
-    x0_local = global2local(x0);
-    s0 = qk_to_xik(x0_local,x0_local);
-    vector_t log_x0(20);
-    log_x0 = Log(x0_local);
-    scalar_t t2i = time2impact(x0,p.heightOffset);
-    if (hopper.contact || t2i != t2i || t2i < 0) {
-	    t2i = 0;
+  matrix_t x_bar(nx, p.N-1);
+  matrix_t u_bar(nu, p.N-1);
+
+  vector_t x0(21);
+  vector_t x0_local(21);
+  vector_t s0(20);
+  x0 << hopper.q, hopper.v;
+  x0_local = global2local(x0);
+  s0 = qk_to_xik(x0_local, x0_local);
+  vector_t log_x0(20);
+  log_x0 = Log(x0_local);
+  scalar_t t2i = time2impact(x0,p.heightOffset);
+  if (hopper.contact || t2i != t2i || t2i < 0) {
+    t2i = 0;
+  }
+
+  d_bar.setZero();
+  x_bar.setZero();
+  u_bar.setZero();
+  bool first_impact = false;
+  bool first_flight = false;
+  int first_flight_index = 0;
+  if (hopper.contact) {
+    first_impact = true;
+  }
+  scalar_t offset = 0;
+  full_ref.setZero();
+  elapsed_time.setZero();
+  elapsed_time(0) = 0;
+
+  static bool flip_started = false;
+  static scalar_t flip_start_time = 100;
+  if (flip_started == false && (abs(command(2) -1)<= 0.05 || abs(command(2) +1)<= 0.05) && t2i == 0) {
+    flip_started = true;
+    flip_start_time = hopper.t;
+  }
+
+  static bool circle_started = false;
+  static scalar_t circle_start_time = 100;
+
+  if (abs(command(2) - 2) <= 0.05) {
+    if (circle_started == false) {
+      circle_started = true;
+      circle_start_time = hopper.t;
+    } else {
+      //command(0) = p.circle_amp*sin(4*3.14159*(hopper.t-circle_start_time)/p.circle_freq);
+      //command(1) = p.circle_amp*cos(2*3.14159*(hopper.t-circle_start_time)/p.circle_freq)-p.circle_amp; 
+      int corner = floor(4*(fmod(hopper.t-circle_start_time, p.circle_freq))/p.circle_freq);
+      switch(corner) {
+        case 0: 
+          command(0) = 1;
+          command(1) = 1;
+          break;
+        case 1:
+          command(0) = 1;
+          command(1) = -1;
+          break;
+        case 2:
+          command(0) = -1;
+          command(1) = -1;
+          break;
+        case 3:
+          command(0) = -1;
+          command(1) = 1;
+        break;
+      }
     }
+  } else {
+    circle_started = false;
+  }
 
-    d_bar.setZero();
-    x_bar.setZero();
-    u_bar.setZero();
-    bool first_impact = false;
-    bool first_flight = false;
-    int first_flight_index = 0;
-    if (hopper.contact) {
-      first_impact = true;
+  scalar_t alpha;
+  if (flip_started) {
+    alpha = command(2)*4*3.14;
+	  if ((hopper.t > (flip_start_time + .3)) && hopper.contact == 1) {
+      flip_started = false;
+      command(2) = 0;
     }
-    scalar_t offset = 0;
-    full_ref.setZero();
-    elapsed_time.setZero();
-    elapsed_time(0) = 0;
+  } else{
+    alpha = 0;
+  }
+  
+  if ((command.segment(0,2) - x0.segment(0,2)).norm()/(p.N*p.dt_flight) > p.max_vel) {
+	  command_interp = x0.segment(0,2) + (command.segment(0,2) - x0.segment(0,2))/((command.segment(0,2) - x0.segment(0,2))).norm()*p.N*p.dt_flight*p.max_vel;
+  } else {
+    command_interp = command.segment(0,2);
+  }
 
-    static bool flip_started = false;
-    static scalar_t flip_start_time = 100;
-    if (flip_started == false && (abs(command(2) -1)<= 0.05 || abs(command(2) +1)<= 0.05) && t2i == 0) {
-	flip_started = true;
-	flip_start_time = hopper.t;
-    }
-
-    static bool circle_started = false;
-    static scalar_t circle_start_time = 100;
-
-    if (abs(command(2)- 2) <= 0.05) {
-      if (circle_started == false) {
-	circle_started = true;
-	circle_start_time = hopper.t;
-      } else {
-        //command(0) = p.circle_amp*sin(4*3.14159*(hopper.t-circle_start_time)/p.circle_freq);
-        //command(1) = p.circle_amp*cos(2*3.14159*(hopper.t-circle_start_time)/p.circle_freq)-p.circle_amp; 
-	int corner = floor(4*(fmod(hopper.t-circle_start_time, p.circle_freq))/p.circle_freq);
-	switch(corner) {
-		case 0: 
-	    command(0) = 1;
-	    command(1) = 1;
-			break;
-		case 1:
-	    command(0) = 1;
-	    command(1) = -1;
-			break;
-		case 2:
-	    command(0) = -1;
-	    command(1) = -1;
-			break;
-		case 3:
-	    command(0) = -1;
-	    command(1) = 1;
-		break;
-	}
+  for (int i = 0; i < p.N-1; i++){
+    if (elapsed_time(i)-offset < t2i) {
+      d_bar(i) = flight;
+      elapsed_time(i+1) = elapsed_time(i) + p.dt_flight;
+      if (!first_flight){
+        first_flight = true;
+        first_flight_index = i;
       }
     } else {
-      circle_started = false;
-    }
-
-    scalar_t alpha;
-   if (flip_started) {
-          alpha = command(2)*4*3.14;
-	  if ((hopper.t > (flip_start_time + .3)) && hopper.contact == 1) {
-            flip_started = false;
-            command(2) = 0;
-          }
-   } else{
-           alpha = 0;
-   }
-  
-   if ((command.segment(0,2) - x0.segment(0,2)).norm()/(p.N*p.dt_flight) > p.max_vel) {
-	command_interp = x0.segment(0,2) + (command.segment(0,2) - x0.segment(0,2))/((command.segment(0,2) - x0.segment(0,2))).norm()*p.N*p.dt_flight*p.max_vel;
-   } else {
-	   command_interp = command.segment(0,2);
-   }
-
-    for (int i = 0; i < p.N-1; i++){
-	if (elapsed_time(i)-offset < t2i) {
+      if (t2i == 0 && elapsed_time(i)-offset+(hopper.t-hopper.last_impact_time)-t2i > p.groundDuration) {
+        if (!first_flight) {
+          d_bar(i) = ground_flight;
+          first_flight = true;
+          elapsed_time(i+1) = elapsed_time(i);
+          t2i = elapsed_time(i) + p.time_between_contacts;
+          first_impact = false;
+          first_flight = true;
+          first_flight_index = i;
+        } else{
           d_bar(i) = flight;
-	  elapsed_time(i+1) = elapsed_time(i) + p.dt_flight;
-	  if (!first_flight){
-	    first_flight = true;
-	    first_flight_index = i;
-	  }
-	} else {
-	  if (t2i == 0 && elapsed_time(i)-offset+(hopper.t-hopper.last_impact_time)-t2i > p.groundDuration) {
-	    if (!first_flight) {
-		    d_bar(i) = ground_flight;
-		    first_flight = true;
-		    elapsed_time(i+1) = elapsed_time(i);
-		    t2i = elapsed_time(i) + p.time_between_contacts;
-		    first_impact = false;
-		    first_flight = true;
-		    first_flight_index = i;
-	    } else{
-	      d_bar(i) = flight;
-	      elapsed_time(i+1) = elapsed_time(i) + p.dt_flight;
-	    }
-	  } else if (elapsed_time(i)-t2i-offset > p.groundDuration) {
-	    if (!first_flight) {
-		    d_bar(i) = ground_flight;
-		    elapsed_time(i+1) = elapsed_time(i);
-		    t2i = elapsed_time(i) + p.time_between_contacts;
-		    first_impact = false;
-		    first_flight = true;
-		    first_flight_index = i;
-	    } else {
-	      d_bar(i) = flight;
-	      elapsed_time(i+1) = elapsed_time(i) + p.dt_flight;
-	    }
-	  } else {
-            if (first_impact == false) {
-	      d_bar(i) = flight_ground;
-	      elapsed_time(i+1) = elapsed_time(i);
-	      first_impact = true;
-	      first_flight = false;
-	    } else{
-	      d_bar(i) = ground;
-	      elapsed_time(i+1) = elapsed_time(i) + p.dt_ground;
-	    }
-	  }
-	}
-	full_ref.segment(i*nx,2) << ((float) p.N-i)/p.N*x0.segment(0,2) + ((float) i)/p.N*command_interp.segment(0,2);
-	full_ref.segment(i*nx+2,1) << p.hop_height;
-	full_ref.segment(i*nx+3,3) << -log_x0.segment(3,3); // Hacky modification to cost to get orientation tracking back TODO
-	if (first_flight) {
-	  scalar_t t = elapsed_time(i) + hopper.t - hopper.last_flight_time;
-	  scalar_t t_max = t2i + hopper.t - hopper.last_flight_time;
-	  // Heuristic to deal with log
-	  if (abs(alpha) > 0.1 && t < 0.285) {
-	    full_ref(i*nx+4) = alpha*std::min(t/t_max,1.);
-	  } else {
-	    full_ref(i*nx+4) = -log_x0(4);
-	  }
-	}
-    }
-    //Terminal cost
-    full_ref.segment((p.N-1)*nx,2) << command_interp.segment(0,2);
-    full_ref.segment((p.N-1)*nx+2,1) << p.hop_height;
-    full_ref.segment((p.N-1)*nx+3,3) << -log_x0.segment(3,3);
-    if (!flip_started) {
-      full_ref((p.N-1)*nx+4) = -log_x0(4);
-    }
-    x_bar.block(0,0,nx,1) << s0;
-    for (int i = 1; i < p.N-1; i++){
-	    x_bar.block(0,i,nx,1) << oneStepPredict(hopper,x_bar.block(0,i-1,nx,1),u_bar.block(0,i-1,nu,1),elapsed_time(i+1)-elapsed_time(i),d_bar(i-1), x0_local);
-    }
-    f = -H*full_ref;
-
-    for (int iter = 0; iter < p.SQP_iter; iter++) {
-      LinearizeDynamics(hopper, x_bar, u_bar, d_bar, x0_local, elapsed_time);
-      updateDynamicEquality(s0);
-      solver.updateGradient(f);
-      solver.updateLinearConstraintsMatrix(dynamics_A);
-      solver.updateBounds(dynamics_b_lb, dynamics_b_ub);
-
-      // solve the QP problem
-      solver.solve();
-      sol = solver.getSolution();
-      if (iter < p.SQP_iter-1) {
-        u_bar.block(0,0,nu,1) << sol.segment(p.N*nx,nu);
-        for (int i = 1; i < p.N-1; i++){
-          x_bar.block(0,i,nx,1) << sol.segment(i*nx,nx);
-          u_bar.block(0,i,nu,1) << sol.segment(p.N*nx+i*nu,nu);
+          elapsed_time(i+1) = elapsed_time(i) + p.dt_flight;
+        }
+      } else if (elapsed_time(i)-t2i-offset > p.groundDuration) {
+        if (!first_flight) {
+          d_bar(i) = ground_flight;
+          elapsed_time(i+1) = elapsed_time(i);
+          t2i = elapsed_time(i) + p.time_between_contacts;
+          first_impact = false;
+          first_flight = true;
+          first_flight_index = i;
+        } else {
+          d_bar(i) = flight;
+          elapsed_time(i+1) = elapsed_time(i) + p.dt_flight;
+        }
+      } else {
+              if (first_impact == false) {
+          d_bar(i) = flight_ground;
+          elapsed_time(i+1) = elapsed_time(i);
+          first_impact = true;
+          first_flight = false;
+        } else{
+          d_bar(i) = ground;
+          elapsed_time(i+1) = elapsed_time(i) + p.dt_ground;
         }
       }
     }
-    return 0;
+    full_ref.segment(i*nx,2) << ((float) p.N-i)/p.N*x0.segment(0,2) + ((float) i)/p.N*command_interp.segment(0,2);
+    full_ref.segment(i*nx+2,1) << p.hop_height;
+    full_ref.segment(i*nx+3,3) << -log_x0.segment(3,3); // Hacky modification to cost to get orientation tracking back TODO
+    if (first_flight) {
+      scalar_t t = elapsed_time(i) + hopper.t - hopper.last_flight_time;
+      scalar_t t_max = t2i + hopper.t - hopper.last_flight_time;
+      // Heuristic to deal with log
+      if (abs(alpha) > 0.1 && t < 0.285) {
+        full_ref(i*nx+4) = alpha*std::min(t/t_max,1.);
+      } else {
+        full_ref(i*nx+4) = -log_x0(4);
+      }
+    }
+  }
+  //Terminal cost
+  full_ref.segment((p.N-1)*nx,2) << command_interp.segment(0,2);
+  full_ref.segment((p.N-1)*nx+2,1) << p.hop_height;
+  full_ref.segment((p.N-1)*nx+3,3) << -log_x0.segment(3,3);
+  if (!flip_started) {
+    full_ref((p.N-1)*nx+4) = -log_x0(4);
+  }
+  x_bar.block(0,0,nx,1) << s0;
+  for (int i = 1; i < p.N-1; i++){
+    x_bar.block(0,i,nx,1) << oneStepPredict(hopper,x_bar.block(0,i-1,nx,1),u_bar.block(0,i-1,nu,1),elapsed_time(i+1)-elapsed_time(i),d_bar(i-1), x0_local);
+  }
+  f = -H*full_ref;
+
+  for (int iter = 0; iter < p.SQP_iter; iter++) {
+    LinearizeDynamics(hopper, x_bar, u_bar, d_bar, x0_local, elapsed_time);
+    updateDynamicEquality(s0);
+    solver.updateGradient(f);
+    solver.updateLinearConstraintsMatrix(dynamics_A);
+    solver.updateBounds(dynamics_b_lb, dynamics_b_ub);
+
+    // solve the QP problem
+    solver.solve();
+    sol = solver.getSolution();
+    if (iter < p.SQP_iter-1) {
+      u_bar.block(0,0,nu,1) << sol.segment(p.N*nx,nu);
+      for (int i = 1; i < p.N-1; i++){
+        x_bar.block(0,i,nx,1) << sol.segment(i*nx,nx);
+        u_bar.block(0,i,nu,1) << sol.segment(p.N*nx+i*nu,nu);
+      }
+    }
+  }
+  return 0;
 }
 
 scalar_t MPC::time2impact(vector_t x, scalar_t heightOffset) {
