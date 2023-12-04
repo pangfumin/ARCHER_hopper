@@ -111,6 +111,32 @@ target_link_libraries(dbpendulum_ik PUBLIC Eigen3::Eigen)
 target_link_libraries(dbpendulum_ik PUBLIC glfw)
 target_link_libraries(dbpendulum_ik PUBLIC yaml-cpp)
 
+add_executable(main_hybrid_pendulum tutorials/hybrid_pendulum/hybrid_pendulum/main.cpp)
+target_link_libraries(main_hybrid_pendulum PUBLIC 
+    ${MUJOCO_LIB}
+    m)
+target_link_libraries(main_hybrid_pendulum PUBLIC Eigen3::Eigen)
+target_link_libraries(main_hybrid_pendulum PUBLIC glfw)
+target_link_libraries(main_hybrid_pendulum PUBLIC yaml-cpp)
+
+
+add_executable(main_hopper tutorials/hopper/hopper/main.cpp)
+target_link_libraries(main_hopper PUBLIC 
+    ${MUJOCO_LIB}
+    m)
+target_link_libraries(main_hopper PUBLIC Eigen3::Eigen)
+target_link_libraries(main_hopper PUBLIC glfw)
+target_link_libraries(main_hopper PUBLIC yaml-cpp)
+
+add_executable(main_biped tutorials/biped/biped/main.cpp)
+target_link_libraries(main_biped PUBLIC 
+    ${MUJOCO_LIB}
+    m)
+target_link_libraries(main_biped PUBLIC Eigen3::Eigen)
+target_link_libraries(main_biped PUBLIC glfw)
+target_link_libraries(main_biped PUBLIC yaml-cpp)
+
+
 set(drake_DIR "/home/pang/dev/drake/build/install/lib/cmake/drake")
 find_package(drake CONFIG REQUIRED)
 
@@ -175,3 +201,27 @@ target_link_libraries(main_cartpole PUBLIC yaml-cpp)
 target_link_libraries(main_cartpole PUBLIC drake::drake)
 target_link_libraries(main_cartpole PUBLIC osqp::osqp)
 target_link_libraries(main_cartpole PUBLIC OsqpEigen::OsqpEigen)
+
+
+
+SET(NLOPT_DIR "/home/pang/dev/nlopt_install/" CACHE PATH "Path to pinocchio dir")
+# find_package(nlopt REQUIRED HINTS ${NLOPT_DIR})
+# message("testo " ${NLOPT_DIR})
+# SET(NLOPT_LIB ${NLOPT_DIR}/lib/libnlopt.so.0.11.1)
+# message("test" ${NLOPT_LIB})
+
+include_directories(${NLOPT_DIR}/include)
+
+add_executable(main_projectile_opt 
+    tutorials/projectile_opt/projectile_opt/main.cpp
+    tutorials/projectile_opt/projectile_opt/constrained.cpp)
+target_link_libraries(main_projectile_opt PUBLIC 
+    ${MUJOCO_LIB}
+    m)
+target_link_libraries(main_projectile_opt PUBLIC Eigen3::Eigen)
+target_link_libraries(main_projectile_opt PUBLIC glfw)
+target_link_libraries(main_projectile_opt PUBLIC yaml-cpp)
+target_link_libraries(main_projectile_opt PUBLIC drake::drake)
+target_link_libraries(main_projectile_opt PUBLIC osqp::osqp)
+target_link_libraries(main_projectile_opt PUBLIC OsqpEigen::OsqpEigen)
+target_link_libraries(main_projectile_opt PUBLIC /home/pang/dev/nlopt_install/lib/libnlopt.so.0.11.1)
