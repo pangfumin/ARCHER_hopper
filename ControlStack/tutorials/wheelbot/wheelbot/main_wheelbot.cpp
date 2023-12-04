@@ -15,6 +15,8 @@
 #include "drake/systems/controllers/linear_quadratic_regulator.h"
 #include "../..//utility/numdiff.hpp"
 
+#define STRING(x) #x
+#define XSTRING(x) STRING(x)
 
 //simulation end time
 double simend = 100;
@@ -31,7 +33,7 @@ const int data_frequency = 10; //frequency at which data is written to a file
 
 //Change the path <template_writeData>
 //Change the xml file
-char path[] = "/home/pang/robotics/ARCHER_hopper/ControlStack/tutorials/wheelbot/wheelbot/";
+std::string path = SOURCE_CODE_PATH + std::string("/tutorials/wheelbot/wheelbot/");
 // char xmlfile[] = "doublependulum.xml";
 
 char xmlfile[] = "pendulemwheel.xml";
@@ -388,15 +390,15 @@ void mycontroller(const mjModel* m, mjData* d)
 // main function
 int main(int argc, const char** argv)
 {
-
+    std::cout << "test: " << SOURCE_CODE_PATH << std::endl;
 
     char xmlpath[100]={};
     char datapath[100]={};
 
-    strcat(xmlpath,path);
+    strcat(xmlpath,path.c_str());
     strcat(xmlpath,xmlfile);
 
-    strcat(datapath,path);
+    strcat(datapath,path.c_str());
     strcat(datapath,datafile);
 
 
@@ -455,11 +457,12 @@ int main(int argc, const char** argv)
     init_save_data();
     init_controller(m,d);
 
-
+    //std::cout < "SOURCE_ROOT: " << std::to_string(XSTRING(PROJECT_SOURCE_DIR)) << std::endl;
+    
     // install control callback
     mjcb_control = mycontroller;
 
-    // return -1;
+    return -1;
 
 
     // d->qpos[2] = 0.1;

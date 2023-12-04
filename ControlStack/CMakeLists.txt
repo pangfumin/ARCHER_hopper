@@ -64,6 +64,8 @@ include_directories(EIGEN3_INCLUDE_DIR)
 # target_link_directories(hopper_sim PUBLIC ${MUJOCO_PATH})
 
 
+add_definitions(-DSOURCE_CODE_PATH="${CMAKE_CURRENT_SOURCE_DIR}")
+
 # add the executable
 add_executable(projectile tutorials//projectile/projectile/main.c)
 target_link_libraries(projectile PUBLIC 
@@ -109,7 +111,7 @@ target_link_libraries(dbpendulum_ik PUBLIC Eigen3::Eigen)
 target_link_libraries(dbpendulum_ik PUBLIC glfw)
 target_link_libraries(dbpendulum_ik PUBLIC yaml-cpp)
 
-set(drake_DIR "/home/pang/robotics/drake/build/install/lib/cmake/drake")
+set(drake_DIR "/home/pang/dev/drake/build/install/lib/cmake/drake")
 find_package(drake CONFIG REQUIRED)
 
 # add_executable(dbpendulum_lqr tutorials/dbpendulum_lqr/dbpendulum_lqr/main.cpp)
@@ -121,6 +123,7 @@ find_package(drake CONFIG REQUIRED)
 # target_link_libraries(dbpendulum_lqr PUBLIC yaml-cpp)
 # target_link_libraries(dbpendulum_lqr PUBLIC drake::drake)
 
+
 add_executable(wheelbot tutorials/wheelbot/wheelbot/main_wheelbot.cpp)
 target_link_libraries(wheelbot PUBLIC 
     ${MUJOCO_LIB}
@@ -129,6 +132,7 @@ target_link_libraries(wheelbot PUBLIC Eigen3::Eigen)
 target_link_libraries(wheelbot PUBLIC glfw)
 target_link_libraries(wheelbot PUBLIC yaml-cpp)
 target_link_libraries(wheelbot PUBLIC drake::drake)
+
 
 add_executable(MPCExample_cartpole tutorials/wheelbot/wheelbot/MPCExample_cartpole.cpp)
 target_link_libraries(MPCExample_cartpole PUBLIC 
