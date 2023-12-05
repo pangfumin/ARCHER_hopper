@@ -136,13 +136,7 @@ target_link_libraries(main_biped PUBLIC Eigen3::Eigen)
 target_link_libraries(main_biped PUBLIC glfw)
 target_link_libraries(main_biped PUBLIC yaml-cpp)
 
-# add_executable(main_manipulator_ik tutorials/manipulator_ik/manipulator_ik/main.cpp)
-# target_link_libraries(main_manipulator_ik PUBLIC 
-#     ${MUJOCO_LIB}
-#     m)
-# target_link_libraries(main_manipulator_ik PUBLIC Eigen3::Eigen)
-# target_link_libraries(main_manipulator_ik PUBLIC glfw)
-# target_link_libraries(main_manipulator_ik PUBLIC yaml-cpp)
+
 
 
 set(drake_DIR "/home/pang/dev/drake/build/install/lib/cmake/drake")
@@ -244,3 +238,13 @@ target_link_libraries(main_projectile_opt PUBLIC drake::drake)
 target_link_libraries(main_projectile_opt PUBLIC osqp::osqp)
 target_link_libraries(main_projectile_opt PUBLIC OsqpEigen::OsqpEigen)
 target_link_libraries(main_projectile_opt PUBLIC /home/pang/dev/nlopt_install/lib/libnlopt.so.0.11.1)
+
+
+add_executable(main_manipulator_ik tutorials/manipulator_ik/manipulator_ik/main.cpp)
+target_link_libraries(main_manipulator_ik PUBLIC 
+    ${MUJOCO_LIB}
+    m)
+target_link_libraries(main_manipulator_ik PUBLIC Eigen3::Eigen)
+target_link_libraries(main_manipulator_ik PUBLIC glfw)
+target_link_libraries(main_manipulator_ik PUBLIC yaml-cpp)
+target_link_libraries(main_manipulator_ik PUBLIC /home/pang/dev/nlopt_install/lib/libnlopt.so.0.11.1)
