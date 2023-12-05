@@ -136,6 +136,14 @@ target_link_libraries(main_biped PUBLIC Eigen3::Eigen)
 target_link_libraries(main_biped PUBLIC glfw)
 target_link_libraries(main_biped PUBLIC yaml-cpp)
 
+# add_executable(main_manipulator_ik tutorials/manipulator_ik/manipulator_ik/main.cpp)
+# target_link_libraries(main_manipulator_ik PUBLIC 
+#     ${MUJOCO_LIB}
+#     m)
+# target_link_libraries(main_manipulator_ik PUBLIC Eigen3::Eigen)
+# target_link_libraries(main_manipulator_ik PUBLIC glfw)
+# target_link_libraries(main_manipulator_ik PUBLIC yaml-cpp)
+
 
 set(drake_DIR "/home/pang/dev/drake/build/install/lib/cmake/drake")
 find_package(drake CONFIG REQUIRED)
@@ -201,6 +209,17 @@ target_link_libraries(main_cartpole PUBLIC yaml-cpp)
 target_link_libraries(main_cartpole PUBLIC drake::drake)
 target_link_libraries(main_cartpole PUBLIC osqp::osqp)
 target_link_libraries(main_cartpole PUBLIC OsqpEigen::OsqpEigen)
+
+add_executable(LQR_pendulum tutorials/wheelbot/wheelbot/LQR_pendulum.cpp)
+target_link_libraries(LQR_pendulum PUBLIC 
+    ${MUJOCO_LIB}
+    m)
+target_link_libraries(LQR_pendulum PUBLIC Eigen3::Eigen)
+target_link_libraries(LQR_pendulum PUBLIC glfw)
+target_link_libraries(LQR_pendulum PUBLIC yaml-cpp)
+target_link_libraries(LQR_pendulum PUBLIC drake::drake)
+target_link_libraries(LQR_pendulum PUBLIC osqp::osqp)
+target_link_libraries(LQR_pendulum PUBLIC OsqpEigen::OsqpEigen)
 
 
 
