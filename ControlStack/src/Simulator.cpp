@@ -347,7 +347,7 @@ int main(int argc, const char **argv) {
                 ind++;
             }
 
-	    // Threshold for registering contact
+	        // Threshold for registering contact
             scalar_t contact_threshold = -0.003;
             TX_state[ind] = (c[0].dist < contact_threshold);
             ind++;
@@ -402,7 +402,7 @@ int main(int argc, const char **argv) {
         d->qpos[32] = RX_torques[21];
         d->qpos[33] = RX_torques[22];
 
-	////////////////////////////////// Standard Mujoco stuff below this //////////////////////////////
+	    ////////////////////////////////// Standard Mujoco stuff below this //////////////////////////////
         // get framebuffer viewport
         mjrRect viewport = {0, 0, 0, 0};
         glfwGetFramebufferSize(window, &viewport.width, &viewport.height);

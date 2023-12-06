@@ -21,8 +21,9 @@ public:
     Eigen::SparseMatrix<double,ColMajor> dynamics_A;
     vector_t dynamics_b_lb, dynamics_b_ub;
     Eigen::SparseMatrix<double,ColMajor> SparseIdentity;
-    Eigen::SparseMatrix<double,ColMajor> H;
-    vector_t f, full_ref;
+    Eigen::SparseMatrix<double,ColMajor> H;  // hessian
+    vector_t f; // gradient
+    vector_t full_ref; // reference
 
     OsqpEigen::Solver solver;
 

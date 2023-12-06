@@ -17,7 +17,7 @@ int MPC::solve(Hopper hopper, vector_t &sol, vector_3t &command, vector_2t &comm
   s0 = qk_to_xik(x0_local, x0_local);
   vector_t log_x0(20);
   log_x0 = Log(x0_local);
-  scalar_t t2i = time2impact(x0,p.heightOffset);
+  scalar_t t2i = time2impact(x0,p.heightOffset); // time to fly
   if (hopper.contact || t2i != t2i || t2i < 0) {
     t2i = 0;
   }
@@ -88,13 +88,18 @@ int MPC::solve(Hopper hopper, vector_t &sol, vector_3t &command, vector_2t &comm
     alpha = 0;
   }
   
+
+  // get interpolate position x, y
   if ((command.segment(0,2) - x0.segment(0,2)).norm()/(p.N*p.dt_flight) > p.max_vel) {
-	  command_interp = x0.segment(0,2) + (command.segment(0,2) - x0.segment(0,2))/((command.segment(0,2) - x0.segment(0,2))).norm()*p.N*p.dt_flight*p.max_vel;
+	  command_interp = x0.segment(0,2) 
+      + (command.segment(0,2) - x0.segment(0,2))/((command.segment(0,2) - x0.segment(0,2))).norm()*p.N*p.dt_flight*p.max_vel;
   } else {
     command_interp = command.segment(0,2);
   }
 
   for (int i = 0; i < p.N-1; i++){
+
+    // fsm to detect domain
     if (elapsed_time(i)-offset < t2i) {
       d_bar(i) = flight;
       elapsed_time(i+1) = elapsed_time(i) + p.dt_flight;
@@ -103,7 +108,7 @@ int MPC::solve(Hopper hopper, vector_t &sol, vector_3t &command, vector_2t &comm
         first_flight_index = i;
       }
     } else {
-      if (t2i == 0 && elapsed_time(i)-offset+(hopper.t-hopper.last_impact_time)-t2i > p.groundDuration) {
+      if (t2i == 0 && elapsed_time(i) - offset+ (hopper.t - hopper.last_impact_time)-t2i > p.groundDuration) {
         if (!first_flight) {
           d_bar(i) = ground_flight;
           first_flight = true;
@@ -129,7 +134,7 @@ int MPC::solve(Hopper hopper, vector_t &sol, vector_3t &command, vector_2t &comm
           elapsed_time(i+1) = elapsed_time(i) + p.dt_flight;
         }
       } else {
-              if (first_impact == false) {
+        if (first_impact == false) {
           d_bar(i) = flight_ground;
           elapsed_time(i+1) = elapsed_time(i);
           first_impact = true;
@@ -140,8 +145,12 @@ int MPC::solve(Hopper hopper, vector_t &sol, vector_3t &command, vector_2t &comm
         }
       }
     }
+
+    // fill position x and position y
     full_ref.segment(i*nx,2) << ((float) p.N-i)/p.N*x0.segment(0,2) + ((float) i)/p.N*command_interp.segment(0,2);
+    // fill height
     full_ref.segment(i*nx+2,1) << p.hop_height;
+    // fill orientation
     full_ref.segment(i*nx+3,3) << -log_x0.segment(3,3); // Hacky modification to cost to get orientation tracking back TODO
     if (first_flight) {
       scalar_t t = elapsed_time(i) + hopper.t - hopper.last_flight_time;
@@ -154,18 +163,23 @@ int MPC::solve(Hopper hopper, vector_t &sol, vector_3t &command, vector_2t &comm
       }
     }
   }
+
   //Terminal cost
-  full_ref.segment((p.N-1)*nx,2) << command_interp.segment(0,2);
-  full_ref.segment((p.N-1)*nx+2,1) << p.hop_height;
-  full_ref.segment((p.N-1)*nx+3,3) << -log_x0.segment(3,3);
+  full_ref.segment((p.N-1)*nx,2) << command_interp.segment(0,2); // position_x, position_y
+  full_ref.segment((p.N-1)*nx+2,1) << p.hop_height; // position_z
+  full_ref.segment((p.N-1)*nx+3,3) << -log_x0.segment(3,3); // orientation
   if (!flip_started) {
     full_ref((p.N-1)*nx+4) = -log_x0(4);
   }
+
+  // X_{k+1} = A * X_{k} + B * u
   x_bar.block(0,0,nx,1) << s0;
   for (int i = 1; i < p.N-1; i++){
-    x_bar.block(0,i,nx,1) << oneStepPredict(hopper,x_bar.block(0,i-1,nx,1),u_bar.block(0,i-1,nu,1),elapsed_time(i+1)-elapsed_time(i),d_bar(i-1), x0_local);
+    x_bar.block(0,i,nx,1) 
+      << oneStepPredict(hopper,x_bar.block(0,i-1,nx,1),u_bar.block(0,i-1,nu,1),
+        elapsed_time(i+1) - elapsed_time(i), d_bar(i-1),  x0_local);
   }
-  f = -H*full_ref;
+  f = -H*full_ref;  // get gradient matrix
 
   for (int iter = 0; iter < p.SQP_iter; iter++) {
     LinearizeDynamics(hopper, x_bar, u_bar, d_bar, x0_local, elapsed_time);
@@ -188,6 +202,7 @@ int MPC::solve(Hopper hopper, vector_t &sol, vector_3t &command, vector_2t &comm
   return 0;
 }
 
+// time to fly until it impact 
 scalar_t MPC::time2impact(vector_t x, scalar_t heightOffset) {
 	scalar_t x0 = x(2)-heightOffset+x(7);
 	scalar_t v0 = x(11+2);
@@ -246,18 +261,18 @@ vector_t MPC::global2local(vector_t x_g) {
 
 	q << x_g.head(11);
 	v << x_g.tail(10);
-        quat_t quat(q(6), q(3), q(4), q(5));
-        auto quat_ = manif::SO3<scalar_t>(quat);
-        matrix_3t Rq = Hopper::quat2Rot(quat);
-        q_local << quat.inverse()._transformVector(q.segment(0,3)), quat.coeffs(),q.segment(7,4);
-        v_local << quat.inverse()._transformVector(v.segment(0,3)), quat.inverse()._transformVector(v.segment(3,3)),v.segment(6,4);
+  quat_t quat(q(6), q(3), q(4), q(5));
+  auto quat_ = manif::SO3<scalar_t>(quat);
+  matrix_3t Rq = Hopper::quat2Rot(quat);
+  q_local << quat.inverse()._transformVector(q.segment(0,3)), quat.coeffs(),q.segment(7,4);
+  v_local << quat.inverse()._transformVector(v.segment(0,3)), quat.inverse()._transformVector(v.segment(3,3)),v.segment(6,4);
 	// Both of these below formulations are wrong but are left as posterity
 	// Murray Notes
 	//v_local << quat.inverse()._transformVector(v.segment(0,3)) - quat.inverse()._transformVector(Hopper::cross(q.segment(0,3))*v.segment(3,3)), quat.inverse()._transformVector(v.segment(3,3)),v.segment(6,4);
 	// Hacky right trivialization instead of left, needed to transform the omega instead
         //v_local << quat.inverse()._transformVector(v.segment(0,3)) + quat.inverse()._transformVector(Hopper::cross(q_local.segment(0,3))*v.segment(3,3)), v.segment(3,7);
 	x_l << q_local, v_local;
-        return x_l;
+  return x_l;
 }
 
 vector_t MPC::local2global(vector_t x_l) {
@@ -271,150 +286,158 @@ vector_t MPC::local2global(vector_t x_l) {
 	v << x_l.tail(10);
 	vector_3t w = v.segment(3,3);
 	vector_3t p = q.segment(0,3);
-        quat_t quat(q(6), q(3), q(4), q(5));
-        matrix_3t Rq = Hopper::quat2Rot(quat);
-        q_global << quat._transformVector(q.segment(0,3)), quat.coeffs(), q.segment(7,4);
-        v_global << quat._transformVector(v.segment(0,3)), quat._transformVector(v.segment(3,3)),v.segment(6,4);
+  quat_t quat(q(6), q(3), q(4), q(5));
+  matrix_3t Rq = Hopper::quat2Rot(quat);
+  q_global << quat._transformVector(q.segment(0,3)), quat.coeffs(), q.segment(7,4);
+  v_global << quat._transformVector(v.segment(0,3)), quat._transformVector(v.segment(3,3)),v.segment(6,4);
 	// Both of these below formulations are wrong but are left as posterity
         // Murray notes:
 	//v_global << quat._transformVector(v.segment(0,3)) + Hopper::cross(q_global.segment(0,3))*quat._transformVector(w), quat._transformVector(w),v.segment(6,4);
 	// Hacky right trivialization instead of left, needed to transform the omega instead
         //v_global << quat._transformVector(v.segment(0,3)) - quat._transformVector(Hopper::cross(p)*w), quat._transformVector(w), v.segment(6,4);
 	x_g << q_global, v_global;
-        return x_g;
+  return x_g;
 }
 
 vector_t MPC::oneStepPredict(Hopper hopper, const vector_t xi, const vector_t tau,
                 const float dt, const domain d, const vector_t q0) {
-        matrix_t Ac(20,20);
-        matrix_t Bc(20,4);
-        matrix_t Cc(20,1);
-        matrix_t Ad(20,20);
-        matrix_t Bd(20,4);
-        matrix_t Cd(20,1);
-        vector_t s_k(20);
-        vector_t s_kp1(20);
-	hopper.DiscreteDynamics(xik_to_qk(xi,q0), tau.tail(4), d, dt, Ac, Bc, Cc, Ad, Bd, Cd,q0);
+  matrix_t Ac(20,20);
+  matrix_t Bc(20,4);
+  matrix_t Cc(20,1);
+  matrix_t Ad(20,20);
+  matrix_t Bd(20,4);
+  matrix_t Cd(20,1);
+  vector_t s_k(20);
+  vector_t s_kp1(20);
+	hopper.DiscreteDynamics(xik_to_qk(xi,q0), tau.tail(4), 
+    d, 
+    dt, Ac, Bc, Cc, Ad, Bd, Cd, q0);
 	s_k = xi;
-        s_kp1 = Ad*s_k + Bd*tau.tail(4) + Cd;
-        return s_kp1;
+  s_kp1 = Ad*s_k + Bd*tau.tail(4) + Cd;
+  return s_kp1;
 }
 
-void MPC::LinearizeDynamics(Hopper hopper, matrix_t x_bar, matrix_t u_bar, Eigen::Matrix<domain, Eigen::Dynamic, 1> d_bar, const vector_t q0, const vector_t elapsed_time) {
-    assertm(x_bar.rows() == nx, "Number of rows in x_bar not what expected");
-    assertm(x_bar.cols() == p.N-1, "Number of cols in x_bar not what expected");
-    assertm(u_bar.rows() == nu, "Number of rows in u_bar not what expected");
-    assertm(u_bar.cols() == p.N-1, "Number of cols in u_bar not what expected");
+void MPC::LinearizeDynamics(Hopper hopper, matrix_t x_bar, matrix_t u_bar, 
+  Eigen::Matrix<domain, Eigen::Dynamic, 1> d_bar, const vector_t q0, const vector_t elapsed_time) {
+  assertm(x_bar.rows() == nx, "Number of rows in x_bar not what expected");
+  assertm(x_bar.cols() == p.N-1, "Number of cols in x_bar not what expected");
+  assertm(u_bar.rows() == nu, "Number of rows in u_bar not what expected");
+  assertm(u_bar.cols() == p.N-1, "Number of cols in u_bar not what expected");
 
-    for (int i = 0; i < p.N-1; i++){
-        hopper.DiscreteDynamics(xik_to_qk(x_bar.block(0,i,nx,1), q0), u_bar.block(0,i,nu,1),d_bar(i), elapsed_time(i+1)-elapsed_time(i), Ac_, Bc_, Cc_, Ad_, Bd_, Cd_,q0);
-        Ac.block(0,i*nx,nx,nx) = Ac_;
-        Bc.block(0,i*nu,nx,nu) = Bc_;
-        Cc.block(0,i,nx,1) = Cc_;
-        Ad.block(0,i*nx,nx,nx) = Ad_;
-        Bd.block(0,i*nu,nx,nu) = Bd_;
-        Cd.block(0,i,nx,1) = Cd_;
-    }
+  for (int i = 0; i < p.N-1; i++){
+    hopper.DiscreteDynamics(
+        xik_to_qk(x_bar.block(0,i,nx,1), q0), 
+        u_bar.block(0,i,nu,1),
+        d_bar(i), 
+        elapsed_time(i+1)-elapsed_time(i), Ac_, Bc_, Cc_, Ad_, Bd_, Cd_,q0);
+    Ac.block(0,i*nx,nx,nx) = Ac_;
+    Bc.block(0,i*nu,nx,nu) = Bc_;
+    Cc.block(0,i,nx,1) = Cc_;
+    Ad.block(0,i*nx,nx,nx) = Ad_;
+    Bd.block(0,i*nu,nx,nu) = Bd_;
+    Cd.block(0,i,nx,1) = Cd_;
+  }
 }
 
 void MPC::reset() {
-    Ac.setZero();
-    Bc.setZero();
-    Cc.setZero();
-    Ad.setZero();
-    Bd.setZero();
-    Cd.setZero();
-    Ac_.setZero();
-    Bc_.setZero();
-    Cc_.setZero();
-    Ad_.setZero();
-    Bd_.setZero();
-    Cd_.setZero();
-    dynamics_A.setZero();
-    dynamics_b_lb.setZero();
-    dynamics_b_ub.setZero();
-    H.setZero();
-    f.setZero();
+  Ac.setZero();
+  Bc.setZero();
+  Cc.setZero();
+  Ad.setZero();
+  Bd.setZero();
+  Cd.setZero();
+  Ac_.setZero();
+  Bc_.setZero();
+  Cc_.setZero();
+  Ad_.setZero();
+  Bd_.setZero();
+  Cd_.setZero();
+  dynamics_A.setZero();
+  dynamics_b_lb.setZero();
+  dynamics_b_ub.setZero();
+  H.setZero();
+  f.setZero();
 }
 
 void MPC::buildDynamicEquality() {
-    int offset = nx;
-    for (int i = 0; i < p.N-1; i++) {
-        for (int j = 0; j < nx; j++) {
-            for (int k = 0; k < nx; k++) {
-		//std::cout << "i,j,k" << i<<","<<j<<","<<k<<std::endl;
-                dynamics_A.insert(offset+i * nx + j, i * nx + k) = 0;
-            }
-            for (int k = 0; k < nu; k++) {
-                dynamics_A.insert(offset+i*nx+j,nx*p.N+i*nu+k) = 0;
-            }
-        }
-    }
-    for (int i = offset; i < nx*p.N; i++) {
-        SparseIdentity.insert(i,i) = 1;
-    }
-    dynamics_A = SparseIdentity - dynamics_A;
-    // for initial condition
-    for (int i = 0; i < offset; i++) {
-        dynamics_A.insert(i,i) = 1;
-    }
-    // set foot input to zero
-    for (int i = 0; i < p.N-1; i++) {
-      dynamics_A.insert(nx*p.N+i,nx*p.N+i*nu) = 1;
-    }
-    // torque_bounds
-    for (int i = 0; i < p.N-1; i++) {
-      for (int j = 0; j < 3; j++) {
-        dynamics_A.insert(nx*p.N+p.N-1+i*3+j,nx*p.N+i*nu+j+1) = 1;
+  int offset = nx;
+  for (int i = 0; i < p.N-1; i++) {
+    for (int j = 0; j < nx; j++) {
+      for (int k = 0; k < nx; k++) {
+//std::cout << "i,j,k" << i<<","<<j<<","<<k<<std::endl;
+          dynamics_A.insert(offset+i * nx + j, i * nx + k) = 0;
+      }
+      for (int k = 0; k < nu; k++) {
+          dynamics_A.insert(offset+i*nx+j,nx*p.N+i*nu+k) = 0;
       }
     }
-    // set foot input to zero
-    for (int i = 0; i < p.N-1; i++) {
-      dynamics_b_lb(nx*p.N+i) = 0;
-      dynamics_b_ub(nx*p.N+i) = p.f_max;
+  }
+  for (int i = offset; i < nx*p.N; i++) {
+    SparseIdentity.insert(i,i) = 1;
+  }
+  dynamics_A = SparseIdentity - dynamics_A;
+  // for initial condition
+  for (int i = 0; i < offset; i++) {
+    dynamics_A.insert(i,i) = 1;
+  }
+  // set foot input to zero
+  for (int i = 0; i < p.N-1; i++) {
+    dynamics_A.insert(nx*p.N+i,nx*p.N+i*nu) = 1;
+  }
+  // torque_bounds
+  for (int i = 0; i < p.N-1; i++) {
+    for (int j = 0; j < 3; j++) {
+      dynamics_A.insert(nx*p.N+p.N-1+i*3+j,nx*p.N+i*nu+j+1) = 1;
     }
-    // set torque limits
-    for (int i = 0; i < p.N-1; i++) {
-      for (int j = 0; j < 3; j++) {
-        dynamics_b_lb(nx*p.N+p.N-1+i*3+j) = -p.tau_max;
-        dynamics_b_ub(nx*p.N+p.N-1+i*3+j) = p.tau_max;
-      }
+  }
+  // set foot input to zero
+  for (int i = 0; i < p.N-1; i++) {
+    dynamics_b_lb(nx*p.N+i) = 0;
+    dynamics_b_ub(nx*p.N+i) = p.f_max;
+  }
+  // set torque limits
+  for (int i = 0; i < p.N-1; i++) {
+    for (int j = 0; j < 3; j++) {
+      dynamics_b_lb(nx*p.N+p.N-1+i*3+j) = -p.tau_max;
+      dynamics_b_ub(nx*p.N+p.N-1+i*3+j) = p.tau_max;
     }
+  }
 }
 
 void MPC::updateDynamicEquality(vector_t x0) {
-    int offset = nx;
-    dynamics_b_lb.segment(0,nx) = x0;
-    dynamics_b_ub.segment(0,nx) = x0;
-    for (int i = 0; i < p.N-1; i++) {
-        for (int j = 0; j < nx; j++) {
-            for (int k = 0; k < nx; k++) {
-                dynamics_A.coeffRef(offset+i * nx + j, i * nx + k) = -Ad(j, i * nx + k);
-            }
-            for (int k = 0; k < nu; k++) {
-                dynamics_A.coeffRef(offset+i*nx+j,nx*p.N+i*nu+k) = -Bd(j,i*nu+k);
-            }
-        }
-        dynamics_b_lb.segment(offset+i*nx,nx) << Cd.block(0,i,nx,1);
-        dynamics_b_ub.segment(offset+i*nx,nx) << Cd.block(0,i,nx,1);
+  int offset = nx;
+  dynamics_b_lb.segment(0,nx) = x0;
+  dynamics_b_ub.segment(0,nx) = x0;
+  for (int i = 0; i < p.N-1; i++) {
+    for (int j = 0; j < nx; j++) {
+      for (int k = 0; k < nx; k++) {
+        dynamics_A.coeffRef(offset+i * nx + j, i * nx + k) = -Ad(j, i * nx + k);
+      }
+      for (int k = 0; k < nu; k++) {
+        dynamics_A.coeffRef(offset+i*nx+j,nx*p.N+i*nu+k) = -Bd(j,i*nu+k);
+      }
     }
+    dynamics_b_lb.segment(offset+i*nx,nx) << Cd.block(0,i,nx,1);
+    dynamics_b_ub.segment(offset+i*nx,nx) << Cd.block(0,i,nx,1);
+  }
 }
 
 void MPC::buildCost(){
-    for (int i = 0; i < p.N; i++) {
-        for (int j = 0; j < nx; j++) {
-	  if (i == p.N-1) {
-            H.insert(i*nx+j,i*nx+j) = p.terminalScaling*p.stateScaling(j);
-	  } else {
-            H.insert(i*nx+j,i*nx+j) = pow(p.discountFactor,i)*p.stateScaling(j);
-	  }
-        }
-	if (i < p.N-1) {
-          for (int j = 0; j < nu; j++) {
-              H.insert(p.N*nx+i*nu+j,p.N*nx+i*nu+j) = pow(p.discountFactor,i)*p.inputScaling(j);
-          }
-	}
+  for (int i = 0; i < p.N; i++) {
+    for (int j = 0; j < nx; j++) {
+      if (i == p.N-1) {
+        H.insert(i*nx+j,i*nx+j) = p.terminalScaling*p.stateScaling(j);
+      } else {
+        H.insert(i*nx+j,i*nx+j) = pow(p.discountFactor,i)*p.stateScaling(j);
+      }
     }
-    f.setZero();
+
+    if (i < p.N-1) {
+      for (int j = 0; j < nu; j++) {
+        H.insert(p.N*nx+i*nu+j,p.N*nx+i*nu+j) = pow(p.discountFactor,i)*p.inputScaling(j);
+      }
+    }
+  }
+  f.setZero();
 }
 

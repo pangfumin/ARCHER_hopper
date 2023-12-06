@@ -61,6 +61,7 @@ double mycost(unsigned n, const double *x, double *grad, void *costdata)
     z_end= Xout[1];
 
     double cost = 0*x[2];
+    // double cost = x[2];
     // for (i=0;i<n;i++)
     //   cost += a[i]*x[i]*x[i];
 
