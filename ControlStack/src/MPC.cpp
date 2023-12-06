@@ -6,7 +6,7 @@
 
 int MPC::solve(Hopper hopper, vector_t &sol, vector_3t &command, vector_2t &command_interp) {
 
-  matrix_t x_bar(nx, p.N-1);
+  matrix_t x_bar(nx, p.N-1); // 20 
   matrix_t u_bar(nu, p.N-1);
 
   vector_t x0(21);
@@ -98,7 +98,6 @@ int MPC::solve(Hopper hopper, vector_t &sol, vector_3t &command, vector_2t &comm
   }
 
   for (int i = 0; i < p.N-1; i++){
-
     // fsm to detect domain
     if (elapsed_time(i)-offset < t2i) {
       d_bar(i) = flight;
@@ -217,7 +216,7 @@ vector_t MPC::Log(vector_t x) {
   quat_t quat(x(6), x(3), x(4), x(5));
   auto quat_ = manif::SO3<scalar_t>(quat);
   manif::SO3Tangent<scalar_t> xi = quat_.log();
-  g_frak << x.segment(0,3),xi.coeffs(),x.segment(7,4),x.segment(11,10);
+  g_frak << x.segment(0,3), xi.coeffs(), x.segment(7,4), x.segment(11,10);
   return g_frak;
 }
 
@@ -270,7 +269,7 @@ vector_t MPC::global2local(vector_t x_g) {
 	// Murray Notes
 	//v_local << quat.inverse()._transformVector(v.segment(0,3)) - quat.inverse()._transformVector(Hopper::cross(q.segment(0,3))*v.segment(3,3)), quat.inverse()._transformVector(v.segment(3,3)),v.segment(6,4);
 	// Hacky right trivialization instead of left, needed to transform the omega instead
-        //v_local << quat.inverse()._transformVector(v.segment(0,3)) + quat.inverse()._transformVector(Hopper::cross(q_local.segment(0,3))*v.segment(3,3)), v.segment(3,7);
+  //v_local << quat.inverse()._transformVector(v.segment(0,3)) + quat.inverse()._transformVector(Hopper::cross(q_local.segment(0,3))*v.segment(3,3)), v.segment(3,7);
 	x_l << q_local, v_local;
   return x_l;
 }
