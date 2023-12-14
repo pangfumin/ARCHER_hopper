@@ -10,13 +10,13 @@
 #include "stdlib.h"
 #include "string.h"
 #include <iostream>
+#include <string>
 #include "drake/systems/controllers/linear_quadratic_regulator.h"
 #include "../..//utility/numdiff.hpp"
 
 
-
-char filename[] 
-  = "/home/pang/repo/robotics/ARCHER_hopper/ControlStack/tutorials/wheelbot/wheelbot/cartpole.xml";
+std::string path = SOURCE_CODE_PATH + std::string("/tutorials/wheelbot/wheelbot/");
+std::string filename  = path + "cartpole.xml";
 
 // MuJoCo data structures
 mjModel* m = NULL;                  // MuJoCo model
@@ -102,10 +102,7 @@ class ForwardModel {
     return true;
 
   }
-
   private:
-  
-
 };
 
 void getAB(const mjModel* m, mjData* d, 
@@ -202,8 +199,6 @@ void mycontroller(const mjModel* m, mjData* d)
 
   // get chasis pitch and rate-of-pitch
   int pendulum_id = 1;
-
-
   // add noise 
   double noise;
   mju_standardNormal(&noise);
@@ -212,7 +207,6 @@ void mycontroller(const mjModel* m, mjData* d)
     bool use_LQR = true;
 
     if (!use_LQR) {
-      
 
     } else {
         Eigen::Matrix4d Q;
@@ -230,9 +224,7 @@ void mycontroller(const mjModel* m, mjData* d)
 
         // std::cout << "K: " << K.transpose() << std::endl;
         d->ctrl[0] = -K[0]*d->qpos[0]-K[1]*d->qvel[0]-K[2]*d->qpos[1]-K[3]*d->qvel[1];
-
     }
-
 }
 
 // main function
@@ -244,7 +236,7 @@ int main(int argc, const char** argv)
 
     // check command-line arguments
     if( argc<2 )
-        m = mj_loadXML(filename, 0, error, 1000);
+        m = mj_loadXML(filename.c_str(), 0, error, 1000);
 
     else
         if( strlen(argv[1])>4 && !strcmp(argv[1]+strlen(argv[1])-4, ".mjb") )
@@ -289,11 +281,9 @@ int main(int argc, const char** argv)
     cam.lookat[1] = arr_view[4];
     cam.lookat[2] = arr_view[5];
 
-
-
     init_controller(m, d);
 
-        // install control callback
+    // install control callback
     mjcb_control = mycontroller;
 
     //m->opt.gravity[2]=-1;

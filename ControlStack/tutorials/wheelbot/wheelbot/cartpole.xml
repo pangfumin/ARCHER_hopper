@@ -17,13 +17,13 @@
     <light diffuse=".5 .5 .5" pos="0 0 3" dir="0 0 -1"/>
 		<geom type="plane" size="100 1 0.1" rgba=".9 0 0 1" material="floor"/>
 
-		<body name="chasis" pos="0 0 0.1" euler="0 0 0">
+		<body name="chasis" pos="0 0 1" euler="0 0 0">
 			<joint type="slide" axis="1 0 0"/>
 			<!-- <joint type="slide" axis="0 0 1"/>
 			<joint type="hinge" axis="0 1 0"/> -->
 			<geom type="box" size="0.1 0.1 0.1" material="object" />
 			<inertial mass="2" pos="0 0 0" diaginertia="0.1 0.1 0.1"/>
-			<body name="wheel" pos="0 0 0.5" euler="0 00 0">
+			<body name="pole" pos="0 0 0.5" euler="0 00 0">
 				<joint name="pin1" type="hinge" pos="0 0 -0.40" axis="0 1 0" />
 				<geom type="cylinder" size=".025 0.4" rgba="0 0 0.9 1" material="floor"/>
 				<inertial mass="1" pos="0 0 0" diaginertia="0.1 0.1 0.1"/>

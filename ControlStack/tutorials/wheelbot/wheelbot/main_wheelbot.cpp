@@ -462,7 +462,7 @@ int main(int argc, const char** argv)
     // install control callback
     mjcb_control = mycontroller;
 
-    return -1;
+    // return -1;
 
 
     // d->qpos[2] = 0.1;

@@ -20,8 +20,8 @@
 //simulation end time
 double simend = 10;
 
-char filename[] 
-  = "/home/pang/robotics/ARCHER_hopper/ControlStack/tutorials/wheelbot/wheelbot/unicycle.xml";
+std::string path = SOURCE_CODE_PATH + std::string("/tutorials/wheelbot/wheelbot/");
+std::string filename =  path + "/" + "unicycle.xml";
 
 // MuJoCo data structures
 mjModel* m = NULL;                  // MuJoCo model
@@ -474,7 +474,7 @@ int main(int argc, const char** argv)
 
     // check command-line arguments
     if( argc<2 )
-        m = mj_loadXML(filename, 0, error, 1000);
+        m = mj_loadXML(filename.c_str(), 0, error, 1000);
 
     else
         if( strlen(argv[1])>4 && !strcmp(argv[1]+strlen(argv[1])-4, ".mjb") )
