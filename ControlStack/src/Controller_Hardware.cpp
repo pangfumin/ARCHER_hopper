@@ -409,7 +409,7 @@ int main(int argc, char **argv){
 	dt_elapsed_MPC = state(0) - t_last_MPC;
 	
 
-        hopper.updateState(state);
+  hopper.updateState(state);
 	quat_t quat(hopper.q(6), hopper.q(3), hopper.q(4), hopper.q(5));
 	hopper.v.segment(3,3) = quat._transformVector(hopper.v.segment(3,3));
 	// ^ turn the local omega to global omega
@@ -423,25 +423,25 @@ int main(int argc, char **argv){
 			//replan = dt_elapsed_MPC >= p.MPC_dt_flight;
 			replan = dt_elapsed_MPC >= p.MPC_dt_replan;
 			break;
-			  }
+    }
 		case (1): {
 			//replan = dt_elapsed_MPC >= p.MPC_dt_ground;
 			replan = dt_elapsed_MPC >= p.MPC_dt_replan;
 			break;
-			  }
+    }
 	}
-        if (replan) {
+  if (replan) {
 	  t2 = std::chrono::high_resolution_clock::now();
-          t_last_MPC = std::chrono::duration_cast<std::chrono::milliseconds>(t2-tstart).count()*1e-3;
+    t_last_MPC = std::chrono::duration_cast<std::chrono::milliseconds>(t2-tstart).count()*1e-3;
 	  previous_vel = current_vel;
 	  last_state << state(1), state(2), state(3);
 	  last_t_state_log = t1;
 
 	  //std::cout << "State: " << state.transpose().format(CSVFormat) << std::endl;
 	  //std::cout << "dt: " << dt << std::endl;
-          opt.solve(hopper, sol, command, command_interp);
+    opt.solve(hopper, sol, command, command_interp);
 	  for (int i = 0; i < opt.p.N; i++) {
-            sol_g.segment(i*(opt.nx+1), opt.nx+1) << MPC::local2global(MPC::xik_to_qk(sol.segment(i*opt.nx,opt.nx),q0_local));
+      sol_g.segment(i*(opt.nx+1), opt.nx+1) << MPC::local2global(MPC::xik_to_qk(sol.segment(i*opt.nx,opt.nx),q0_local));
 	  }
 	  sol_g.segment((opt.nx+1)*opt.p.N,opt.nu*(opt.p.N-1)) << sol.segment((opt.nx)*opt.p.N,opt.nu*(opt.p.N-1));
 	  x_pred << MPC::local2global(MPC::xik_to_qk(sol.segment(20,20),q0_local)),MPC::local2global(MPC::xik_to_qk(sol.segment(40,20),q0_local)); 
@@ -450,12 +450,12 @@ int main(int argc, char **argv){
 	  t2 = std::chrono::high_resolution_clock::now();
 	  //std::cout <<"Timing: "<< std::chrono::duration_cast<std::chrono::nanoseconds>(t2-t1).count()*1e-6 << "[ms]" << "\n";
 
-          t_log_MPC = std::chrono::duration_cast<std::chrono::milliseconds>(t2-tstart).count()*1e-3;
+    t_log_MPC = std::chrono::duration_cast<std::chrono::milliseconds>(t2-tstart).count()*1e-3;
 
 	  x_term << MPC::local2global(MPC::xik_to_qk(sol.segment(opt.nx*(opt.p.N-1),20),q0_local));
 
 	}
-        //vector_t x_des(21);
+  //vector_t x_des(21);
 	//hopper.css2dss(opt.Ac.block(0,0,opt.nx,opt.nx),opt.Bc.block(0,0,opt.nx,opt.nu),opt.Cc.block(0,0,opt.nx,1),state(0)-t_last_MPC,opt.Ad_,opt.Bd_,opt.Cd_);
 	//x_des << MPC::local2global(MPC::Exp(opt.Ad_*sol.segment(0,20) + opt.Bd_*u_pred + opt.Cd_));
 	//quat_des = Quaternion<scalar_t>(x_des(6), x_des(3), x_des(4), x_des(5));
@@ -468,7 +468,7 @@ int main(int argc, char **argv){
 	quat_term = Quaternion<scalar_t>(x_term(6), x_term(3), x_term(4), x_term(5));
 	pos_term << x_term(0), x_term(1), x_term(2);
 
-        {std::lock_guard<std::mutex> lck(des_state_mtx);
+  {std::lock_guard<std::mutex> lck(des_state_mtx);
 		desstate[0] = quat_des.w();
 		desstate[1] = quat_des.x();
 		desstate[2] = quat_des.y();

@@ -236,12 +236,12 @@ int main() {
                 //replan = dt_elapsed_MPC >= p.MPC_dt_flight;
                 replan = dt_elapsed_MPC >= p.MPC_dt_replan;
                 break;
-                }
+            }
             case (1): {
                 //replan = dt_elapsed_MPC >= p.MPC_dt_ground;
                 replan = dt_elapsed_MPC >= p.MPC_dt_replan;
                 break;
-                }
+            }
         }
 
         if (replan) {

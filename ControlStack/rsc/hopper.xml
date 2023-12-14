@@ -99,32 +99,32 @@
             </body-->
 
         </body>
-        <body name="target" pos="0 0 0" >
+    <body name="target" pos="0 0 0" >
 		<geom type="ellipsoid" size=".05 .05 .01" contype="0" conaffinity="0" rgba = "0.8588    0.3176    0.3176  1.00"/>
 		<joint type="slide" axis = "1 0 0"/>
 		<joint type="slide" axis = "0 1 0"/>
 	</body>
-        <body name="target1" pos="0 0 0" >
+    <body name="target1" pos="0 0 0" >
 		<geom type="ellipsoid" size=".02 .02 .005" contype="0" conaffinity="0" rgba = "0.8706    0.7059    0.3216  1.00"/>
 		<joint type="slide" axis = "1 0 0"/>
 		<joint type="slide" axis = "0 1 0"/>
 	</body>
-        <body name="target2" pos="0 0 0" >
+    <body name="target2" pos="0 0 0" >
 		<geom type="ellipsoid" size=".02 .02 .005" contype="0" conaffinity="0" rgba = "0.8706    0.7059    0.3216  1.00"/>
 		<joint type="slide" axis = "1 0 0"/>
 		<joint type="slide" axis = "0 1 0"/>
 	</body>
-        <body name="target3" pos="0 0 0" >
+    <body name="target3" pos="0 0 0" >
 		<geom type="ellipsoid" size=".02 .02 .005" contype="0" conaffinity="0" rgba = "0.8706    0.7059    0.3216  1.00"/>
 		<joint type="slide" axis = "1 0 0"/>
 		<joint type="slide" axis = "0 1 0"/>
 	</body>
-        <body name="target4" pos="0 0 0" >
+    <body name="target4" pos="0 0 0" >
 		<geom type="ellipsoid" size=".02 .02 .005" contype="0" conaffinity="0" rgba = "0.8706    0.7059    0.3216  1.00"/>
 		<joint type="slide" axis = "1 0 0"/>
 		<joint type="slide" axis = "0 1 0"/>
 	</body>
-        <body name="target5" pos="0 0 0" >
+    <body name="target5" pos="0 0 0" >
 		<geom type="ellipsoid" size=".02 .02 .005" contype="0" conaffinity="0" rgba = "0.8706    0.7059    0.3216  1.00"/>
 		<joint type="slide" axis = "1 0 0"/>
 		<joint type="slide" axis = "0 1 0"/>

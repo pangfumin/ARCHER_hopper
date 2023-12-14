@@ -146,7 +146,7 @@ int MPC::solve(Hopper hopper, vector_t &sol, vector_3t &command, vector_2t &comm
     }
 
     // fill position x and position y
-    full_ref.segment(i*nx,2) << ((float) p.N-i)/p.N*x0.segment(0,2) + ((float) i)/p.N*command_interp.segment(0,2);
+    full_ref.segment(i*nx,2) << ((float) p.N-i)/p.N*x0.segment(0,2) + ((float) i)/p.N*command_interp.segment(0,2); 
     // fill height
     full_ref.segment(i*nx+2,1) << p.hop_height;
     // fill orientation
@@ -206,7 +206,6 @@ scalar_t MPC::time2impact(vector_t x, scalar_t heightOffset) {
 	scalar_t x0 = x(2)-heightOffset+x(7);
 	scalar_t v0 = x(11+2);
 	scalar_t g = 9.81;
-
 	scalar_t t = (-v0-sqrt(pow(v0,2)+4*g*x0))/(-2*g);
 	return t;
 }
@@ -223,7 +222,7 @@ vector_t MPC::Log(vector_t x) {
 vector_t MPC::Exp(vector_t xi) {
   vector_t g(21);
   manif::SO3Tangent<scalar_t> xi_;
-  xi_ << xi(3),xi(4),xi(5);
+  xi_ << xi(3), xi(4), xi(5);
   quat_t quat = xi_.exp().quat();
   g << xi.segment(0,3), quat.coeffs(), xi.segment(6,14);
   return g;
@@ -232,7 +231,6 @@ vector_t MPC::Exp(vector_t xi) {
 vector_t MPC::qk_to_xik(vector_t qk, vector_t q0) {
   quat_t quat0(q0(6), q0(3), q0(4), q0(5));
   quat_t quatk(qk(6), qk(3), qk(4), qk(5));
-
   vector_t tmp(21);
   tmp << qk.segment(0,3), (quat0.inverse()*quatk).coeffs(), qk.segment(7,14);
   vector_t xik(20);
@@ -290,10 +288,10 @@ vector_t MPC::local2global(vector_t x_l) {
   q_global << quat._transformVector(q.segment(0,3)), quat.coeffs(), q.segment(7,4);
   v_global << quat._transformVector(v.segment(0,3)), quat._transformVector(v.segment(3,3)),v.segment(6,4);
 	// Both of these below formulations are wrong but are left as posterity
-        // Murray notes:
+  // Murray notes:
 	//v_global << quat._transformVector(v.segment(0,3)) + Hopper::cross(q_global.segment(0,3))*quat._transformVector(w), quat._transformVector(w),v.segment(6,4);
 	// Hacky right trivialization instead of left, needed to transform the omega instead
-        //v_global << quat._transformVector(v.segment(0,3)) - quat._transformVector(Hopper::cross(p)*w), quat._transformVector(w), v.segment(6,4);
+  //v_global << quat._transformVector(v.segment(0,3)) - quat._transformVector(Hopper::cross(p)*w), quat._transformVector(w), v.segment(6,4);
 	x_g << q_global, v_global;
   return x_g;
 }
@@ -310,7 +308,9 @@ vector_t MPC::oneStepPredict(Hopper hopper, const vector_t xi, const vector_t ta
   vector_t s_kp1(20);
 	hopper.DiscreteDynamics(xik_to_qk(xi,q0), tau.tail(4), 
     d, 
-    dt, Ac, Bc, Cc, Ad, Bd, Cd, q0);
+    dt,
+    Ac, Bc, Cc, 
+    Ad, Bd, Cd, q0);
 	s_k = xi;
   s_kp1 = Ad*s_k + Bd*tau.tail(4) + Cd;
   return s_kp1;
@@ -363,11 +363,11 @@ void MPC::buildDynamicEquality() {
   for (int i = 0; i < p.N-1; i++) {
     for (int j = 0; j < nx; j++) {
       for (int k = 0; k < nx; k++) {
-//std::cout << "i,j,k" << i<<","<<j<<","<<k<<std::endl;
-          dynamics_A.insert(offset+i * nx + j, i * nx + k) = 0;
+        //std::cout << "i,j,k" << i<<","<<j<<","<<k<<std::endl;
+        dynamics_A.insert(offset+i * nx + j, i * nx + k) = 0;
       }
       for (int k = 0; k < nu; k++) {
-          dynamics_A.insert(offset+i*nx+j,nx*p.N+i*nu+k) = 0;
+        dynamics_A.insert(offset+i*nx+j,nx*p.N+i*nu+k) = 0;
       }
     }
   }
